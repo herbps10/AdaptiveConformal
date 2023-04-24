@@ -1,0 +1,105 @@
+---
+title: "example"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{example}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(AdaptiveConformal)
+```
+
+In this vignette, we will produce conformal prediction intervals for French electricity demand data from the [`opera`](https://cran.r-project.org/web/packages/opera/index.html) package.
+
+```{r}
+data(electric_load, package = "opera")
+```
+
+The dataset comprise weekly observations of total electricity consumption in France from 1996 to 2009. 
+```{r}
+Y <- ts(electric_load$Load, frequency = 52, start = 1996)
+```
+
+```{r}
+plot(Y, ylab = "Electricity consumption")
+```
+
+Let $Y_t$ be the electricity demand at time $t$ for $t = 1, \dots, T$. 
+
+We generate predictions and prediction intervals in the following procedure. Set $t^* \geq 1$ to the first year in which predictions will be generated.
+- For $t = t^*, \dots, T$:
+  - Train a model $\mathcal{M}_t$ to predict $Y_t$ using only the data $Y_1, \dots, Y_{t-1}$.
+  - Generate a prediction $\hat{Y}_t$ using $\mathcal{M}_t$.
+  - Generate a predictive interval $[\hat{Y}_t^l, \hat{Y}_t^u]$ using an ACI algorithm.
+  - Observe the true observation $Y_t$ and update the ACI algorithm accordingly. 
+
+## Predictions
+For this vignette, we'll first train the models as an initial step so that we can compare multiple ACI algorithms.
+```{r}
+predictions <- rep(NA, length(Y))
+t_star <- 250
+for(t in t_star:length(Y)) {
+  # Fit a SARIMA model 
+  fit <- forecast::Arima(window(Y, end = time(Y)[t - 1]), order = c(1, 0, 0), seasonal = c(1, 1, 0))
+  
+  # Get prediction of next Y
+  predictions[t] <- forecast(fit, h = 1)$mean
+}
+```
+
+```{r}
+plot(Y, ylab = "Electricity consumption")
+lines(ts(predictions, frequency = 52, start = 1996), col = "red")
+legend("topleft", legend = c("Observations", "Predictions"), fill = c("black", "red"))
+```
+
+## Conformal Prediction Intervals
+Start by initializing the ACI object. We will target $90\%$ prediction intervals using the `AgACI` method. This method requires specifying a grid of learning rates to use to generate candidate prediction intervals. The candidate intervals are then combined using an online expert aggregation method.
+```{r}
+model <- aci(method = "AgACI", alpha = 0.9, parameters = list(gamma_grid = seq(0, 0.5, 0.02)))
+```
+
+Next, we update the ACI method with online predictions and the observed data.
+```{r}
+model <- update(model, newY = Y[t_star:length(Y)], newpredictions = predictions[t_star:length(Y)])
+```
+
+Note that we could also build the model by supplying the observations one at a time, which may be useful in a true online or streaming scenario where we receive the observations sequentially.
+```{r}
+model <- aci(method = "AgACI", alpha = 0.9, parameters = list(gamma_grid = seq(0, 0.5, 0.02)))
+for(t in t_star:length(T)) {
+  model <- update(model, newY = Y[t], newpredictions = predictions[t])
+}
+```
+
+We can print the model to see some basic information about the results, including the empirical coverage.
+```{r}
+print(model)
+```
+
+We can also plot the observations and the conformal prediction intervals.
+```{r}
+plot(model)
+```
+
+Let's zoom in on a smaller section so we can see the prediction intervals more clearly:
+```{r}
+plot(model, index = 200:300)
+```
+
+
+Let's dig a bit deeper to see which learning rates were assigned weight by the online aggregation method.
+```{r}
+plot(model$parameters$gamma_grid, model$internal$experts$lower$coefficients, col = "black", xlab = "Learning rate (gamma)", ylab = "Weight", type = "b")
+points(model$parameters$gamma_grid, model$internal$experts$upper$coefficients, col = "darkred", type = "b")
+legend("topright", legend = c("Lower interval bound", "Upper interval bound"), fill = c("black", "darkred"))
+```

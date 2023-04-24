@@ -8,8 +8,8 @@ interval_constructor_conformity <- function(conformity_score) {
 
   function(prediction, theta, object) {
     conformity_scores <- score(object$predictions, object$Y)
-    Salpha <- quantile(conformity_scores, max(0, min(theta, 1)), na.rm = TRUE)
-    if(is.na(Salpha)) Salpha <- 0
+    Salpha <- ifelse(theta > 1, Inf, quantile(conformity_scores, max(0, min(theta, 1)), type = 1, na.rm = TRUE))
+    Salpha <- ifelse(is.na(Salpha), 0, Salpha)
     c(prediction[1] - Salpha, prediction[1] + Salpha)
   }
 }

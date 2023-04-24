@@ -38,7 +38,7 @@
 #'
 #' @export
 aci <- function(Y = NULL, predictions = NULL, training = FALSE, alpha = 0.95, method = "ACI", parameters = list()) {
-  method <- match.arg(method, c("AgACI", "ACI"))
+  method <- match.arg(method, c("AgACI", "ACI", "FACI"))
 
   object <- list(
     method = method,
@@ -53,12 +53,13 @@ aci <- function(Y = NULL, predictions = NULL, training = FALSE, alpha = 0.95, me
     training = logical(0)
   )
 
-  if(method == "ACI") {
-    object <- initialize_aci(object)
-  }
-  else if(method == "AgACI") {
-    object <- initialize_ag_aci(object)
-  }
+  initializers <- list(
+    ACI = initialize_aci,
+    AgACI = initialize_ag_aci,
+    FACI = initialize_faci
+  )
+
+  object <- initializers[[method]](object)
 
   class(object) <- "aci"
 
@@ -76,14 +77,15 @@ aci <- function(Y = NULL, predictions = NULL, training = FALSE, alpha = 0.95, me
 #'
 #' @export
 predict.aci <- function(object, prediction) {
-  method <- match.arg(object$method, c("AgACI", "ACI"))
+  method <- match.arg(object$method, c("AgACI", "ACI", "FACI"))
 
-  if(method == "AgACI") {
-    predict_ag_aci(object, prediction)
-  }
-  else if(method == "ACI") {
-    predict_aci(object, prediction)
-  }
+  funs <- list(
+    ACI = predict_aci,
+    AgACI = predict_ag_aci,
+    FACI = predict_faci
+  )
+
+  funs[[method]](object, prediction)
 }
 
 

@@ -6,7 +6,7 @@
 #'
 #' @export
 update.aci <- function(object, newY, newpredictions, training = FALSE) {
-  method <- match.arg(object$method, c("ACI", "AgACI"))
+  method <- match.arg(object$method, c("ACI", "AgACI", "FACI"))
 
   n <- length(newY)
   prediction_matrix <- is.matrix(newpredictions)
@@ -17,14 +17,15 @@ update.aci <- function(object, newY, newpredictions, training = FALSE) {
     stop("Length of newY and length of newpredictions must be the same.")
   }
 
-  if(object$method == "ACI") {
-    object <- update_aci(object, Y = newY, predictions = newpredictions, training = training)
-  }
-  else if(object$method == "AgACI") {
-    object <- update_ag_aci(object, Y = newY, predictions = newpredictions, training = training)
-  }
+  updaters <- list(
+    ACI   = update_aci,
+    AgACI = update_ag_aci,
+    FACI  = update_faci
+  )
 
-  object$training  <- c(object$training, rep(training, length(newY)))
+  object <- updaters[[method]](object, Y = newY, predictions = newpredictions, training = training)
+
+  object$training <- c(object$training, rep(training, length(newY)))
   object$coverage <- mean(object$covered[object$training == FALSE])
 
   object

@@ -7,18 +7,19 @@
 #' @param method a string specificying the Adaptive Conformal Inference method to use.
 #' The available methods are:
 #' \describe{
-#'    \item{'ACI'}{The original Adaptive Conformal Inference method proposed by \insertCite{gibbs2021aci}.
+#'    \item{'RollingRC'}{Rolling Risk Control \insertCite{feldman2022rolling}.
 #'    Requires specification of a positive learning rate \strong{gamma}.}
-#'    \item{'AgACI'}{Aggregated ACI method introduced by \insertCite{zaffran2022agaci}.
+#'    \item{'AgACI'}{Aggregated ACI \insertCite{zaffran2022agaci}.
 #'    Multiple ACI algorithms are executed for a grid of learning rates, and the resulting intervals are combined using the Bernstein Online Aggregation method
-#'    for online aggregation of experts. Requires specification of a grid of learning rates \strong{gamma_grid}.}
+#'    for online aggregation of experts.}
+#'    \item{'FACI'}{Fully Adaptive Conformal Inference \insertCite{gibbs2022faci}.}
 #' }
 #' @param parameters a list of parameters that depend on the chosen ACI method.
 #' \describe{
-#'    \item{gamma}{A positive number specifying the learning rate. For method "ACI".}
-#'    \item{gamma_grid}{A grid of positive learning rates. For method "AgACI".}
+#'    \item{gamma}{A positive number specifying the learning rate. For method "RollingRC".}
+#'    \item{gamma_grid}{A grid of positive learning rates. For method "AgACI" and "FACI.}
 #'    \item{interval_constructor}{
-#'      Specifies how the prediction intervals are to be formed.
+#'      Specifies how the prediction intervals are to be formed. Only for "RollingRC" and "AgACI". For "FACI", it is always set to "conformal".
 #'      \begin{itemize}
 #'        \item "linear": the interval is formed as [prediction - theta, prediction + theta].
 #'        \item "conformal": the interval is formed as [prediction - S, prediction + S], where S is the theta*100% quantile of the previously observed
@@ -38,7 +39,7 @@
 #'
 #' @export
 aci <- function(Y = NULL, predictions = NULL, training = FALSE, alpha = 0.95, method = "ACI", parameters = list()) {
-  method <- match.arg(method, c("AgACI", "ACI", "FACI"))
+  method <- match.arg(method, c("AgACI", "RollingRC", "FACI"))
 
   object <- list(
     method = method,
@@ -50,11 +51,13 @@ aci <- function(Y = NULL, predictions = NULL, training = FALSE, alpha = 0.95, me
     parameters = parameters,
     internal = NULL,
     coverage = NULL,
+    mean_width = NULL,
+    mean_interval_loss = NULL,
     training = logical(0)
   )
 
   initializers <- list(
-    ACI = initialize_aci,
+    RollingRC = initialize_rolling_rc,
     AgACI = initialize_ag_aci,
     FACI = initialize_faci
   )
@@ -77,10 +80,10 @@ aci <- function(Y = NULL, predictions = NULL, training = FALSE, alpha = 0.95, me
 #'
 #' @export
 predict.aci <- function(object, prediction) {
-  method <- match.arg(object$method, c("AgACI", "ACI", "FACI"))
+  method <- match.arg(object$method, c("AgACI", "RollingRC", "FACI"))
 
   funs <- list(
-    ACI = predict_aci,
+    RollingRC = predict_rolling_rc,
     AgACI = predict_ag_aci,
     FACI = predict_faci
   )
@@ -95,9 +98,28 @@ predict.aci <- function(object, prediction) {
 #'
 #' @export
 print.aci <- function(object) {
+  cat(paste0("ACI object with ", length(object$Y), " observations.\n"))
+}
+
+#' Summary of an ACI object
+#'
+#' @param object object of class "aci"
+#'
+#' @export
+summary.aci <- function(object) {
   observed <- object$training == FALSE
+
+
   N_intervals <- sum(observed)
   within <- sum(object$Y[observed] >= object$intervals[observed, 1] & object$Y[observed] <= object$intervals[observed, 2])
 
-  cat(paste0("ACI object containing ", length(object$Y), " observations. Empirical coverage: ", format(signif(object$coverage * 100, 4)), "% (", within, "/", N_intervals, " prediction intervals contained the observed value)."))
+  cat(paste0("Method: ", object$method, "\n"))
+  if(sum(observed) == 0) {
+    cat("No intervals have been produced by this method yet.")
+  }
+  else {
+    cat(paste0("Empirical coverage: ", format(round(object$coverage * 100, 2)), "% (", within, "/", N_intervals, ")\n"))
+    cat(paste0("Mean interval width: ", format(round(object$mean_width, 2)), "\n"))
+    cat(paste0("Mean interval loss: ", format(round(object$mean_interval_loss, 2)), "\n"))
+  }
 }

@@ -1,4 +1,4 @@
-initialize_aci <- function(object) {
+initialize_rolling_rc <- function(object) {
   if(is.null(object$internal)) {
     # Default to using a interval constructor based on absolute error conformity scores
     if(is.null(object$parameters$conformity_score)) {
@@ -6,10 +6,10 @@ initialize_aci <- function(object) {
     }
 
     if(is.null(object$parameters$interval_constructor)) {
-      object$parameters$interval_constructor <- "conformity"
+      object$parameters$interval_constructor <- "conformal"
     }
 
-    if(tolower(object$parameters$interval_constructor) == "conformity") {
+    if(tolower(object$parameters$interval_constructor) == "conformal") {
       interval_constructor <- interval_constructor_conformity(object$parameters$conformity_score)
     }
     else if(tolower(object$parameters$interval_constructor) == "linear") {
@@ -28,7 +28,7 @@ initialize_aci <- function(object) {
   return(object)
 }
 
-update_aci <- function(object, Y, predictions, training = FALSE) {
+update_rolling_rc <- function(object, Y, predictions, training = FALSE) {
   n <- length(Y)
   prediction_matrix <- is.matrix(predictions)
 
@@ -47,10 +47,10 @@ update_aci <- function(object, Y, predictions, training = FALSE) {
     for(index in 1:n) {
       # Generate a prediction interval
       if(prediction_matrix) {
-        interval <- predict_aci(object, predictions[index, ])
+        interval <- predict_rolling_rc(object, predictions[index, ])
       }
       else {
-        interval <- predict_aci(object, predictions[index])
+        interval <- predict_rolling_rc(object, predictions[index])
       }
 
       # Check if observation was inside or outside of the prediction interval
@@ -72,6 +72,6 @@ update_aci <- function(object, Y, predictions, training = FALSE) {
 }
 
 #' Generate a prediction interval
-predict_aci <- function(object, prediction) {
+predict_rolling_rc <- function(object, prediction) {
   object$internal$interval_constructor(prediction, tail(object$internal$theta, 1), object)
 }

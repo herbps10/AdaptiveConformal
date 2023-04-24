@@ -2,16 +2,16 @@
 initialize_ag_aci <- function(object) {
   if(is.null(object$internal)) {
     if(is.null(object$parameters$gamma_grid)) {
-      object$parameters$gamma_grid <- seq(0, 1, 0.1)
+      object$parameters$gamma_grid <- c(0.001, 0.002, 0.004, 0.008, 0.016, 0.032, 0.065, 0.128)
     }
 
-    theta0 <- ifelse(object$parameters$interval_constructor == "conformity", object$alpha, 0)
+    theta0 <- ifelse(object$parameters$interval_constructor == "conformal", object$alpha, 0)
 
     # Initialize set of candidate learners
     candidate_acis <- lapply(object$parameters$gamma_grid, function(gamma) {
       aci(
         alpha = object$alpha,
-        method = "ACI",
+        method = "RollingRC",
         parameters = list(
           gamma = gamma,
           theta0 = object$alpha,
@@ -53,11 +53,11 @@ update_ag_aci <- function(object, Y, predictions, training = FALSE) {
     object$intervals <- rbind(object$intervals, matrix(rep(NA, 2 * length(Y)), ncol = 2, nrow = length(Y)))
 
     # Update each of the candidate ACIs
-    object$internal$candidate_acis <- lapply(object$internal$candidate_acis, update.aci, newY = Y, newpredictions = predictions, training = training)
+    object$internal$candidate_acis <- lapply(object$internal$candidate_acis, update, newY = Y, newpredictions = predictions, training = training)
   }
   else {
     # Update each of the candidate ACIs
-    object$internal$candidate_acis <- lapply(object$internal$candidate_acis, update.aci, newY = Y, newpredictions = predictions, training = training)
+    object$internal$candidate_acis <- lapply(object$internal$candidate_acis, update, newY = Y, newpredictions = predictions, training = training)
 
     lower_candidates <- matrix(unlist(lapply(object$internal$candidate_acis, function(aci) tail(aci$intervals[, 1], n))), nrow = n, byrow = FALSE)
     upper_candidates <- matrix(unlist(lapply(object$internal$candidate_acis, function(aci) tail(aci$intervals[, 2], n))), nrow = n, byrow = FALSE)

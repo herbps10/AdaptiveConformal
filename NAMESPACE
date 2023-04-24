@@ -3,5 +3,6 @@
 S3method(plot,aci)
 S3method(predict,aci)
 S3method(print,aci)
+S3method(summary,aci)
 S3method(update,aci)
 export(aci)

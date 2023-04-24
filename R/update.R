@@ -6,7 +6,7 @@
 #'
 #' @export
 update.aci <- function(object, newY, newpredictions, training = FALSE) {
-  method <- match.arg(object$method, c("ACI", "AgACI", "FACI"))
+  method <- match.arg(object$method, c("RollingRC", "AgACI", "FACI"))
 
   n <- length(newY)
   prediction_matrix <- is.matrix(newpredictions)
@@ -18,7 +18,7 @@ update.aci <- function(object, newY, newpredictions, training = FALSE) {
   }
 
   updaters <- list(
-    ACI   = update_aci,
+    RollingRC  = update_rolling_rc,
     AgACI = update_ag_aci,
     FACI  = update_faci
   )
@@ -26,7 +26,12 @@ update.aci <- function(object, newY, newpredictions, training = FALSE) {
   object <- updaters[[method]](object, Y = newY, predictions = newpredictions, training = training)
 
   object$training <- c(object$training, rep(training, length(newY)))
-  object$coverage <- mean(object$covered[object$training == FALSE])
+
+  # Calculate metrics
+  observed <- object$training == FALSE
+  object$coverage <- mean(object$covered[observed])
+  object$mean_width <- mean(object$intervals[observed, 2] - object$intervals[observed, 1])
+  object$mean_interval_loss <- mean(interval_loss(object$Y[observed], object$intervals[, 1], object$intervals[, 2], object$alpha))
 
   object
 }

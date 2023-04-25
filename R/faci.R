@@ -1,3 +1,4 @@
+# Initialize a FACI object
 initialize_faci <- function(object) {
   if(is.null(object$internal)) {
     I <- 250
@@ -52,10 +53,17 @@ initialize_faci <- function(object) {
   return(object)
 }
 
+# Pinball loss function used in FACI method
+#
+# alpha: coverage level: targets (1 - alpha) * 100\% prediction interval
+# beta: largest value of theta such that Y is included in the prediction interval
+# theta: current value of theta parameter
+#
 loss_faci <- function(alpha, beta, theta) {
   alpha * (beta - theta) - pmin(0, beta - theta)
 }
 
+# Update FACI with new data
 update_faci <- function(object, Y, predictions, training = FALSE) {
   n <- length(Y)
   prediction_matrix <- is.matrix(predictions)
@@ -125,11 +133,10 @@ update_faci <- function(object, Y, predictions, training = FALSE) {
     }
   }
 
-
   return(object)
 }
 
-#' Generate a prediction interval
+# Generate a FACI prediction interval
 predict_faci <- function(object, prediction) {
   t <- nrow(object$internal$theta)
   p <- object$internal$weights[t, ]

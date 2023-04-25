@@ -1,23 +1,25 @@
 initialize_rolling_rc <- function(object) {
-  if(is.null(object$internal)) {
-    # Default to using a interval constructor based on absolute error conformity scores
-    if(is.null(object$parameters$conformity_score)) {
-      object$parameters$conformity_score <- "absolute_error"
-    }
+  default_parameters <- list(
+    gamma = 0.01,
+    interval_constructor = "conformal",
+    conformity_score = "absolute_error"
+  )
 
-    if(is.null(object$parameters$interval_constructor)) {
-      object$parameters$interval_constructor <- "conformal"
+  if(is.null(object$internal)) {
+    for(n in names(default_parameters)) {
+      if(is.null(object$parameters[[n]])) {
+        object$parameters[[n]] <- default_parameters[[n]]
+      }
     }
 
     if(tolower(object$parameters$interval_constructor) == "conformal") {
       interval_constructor <- interval_constructor_conformity(object$parameters$conformity_score)
+      theta0 <- ifelse(is.null(object$parameters$theta0), object$alpha, object$parameters$theta0)
     }
     else if(tolower(object$parameters$interval_constructor) == "linear") {
       interval_constructor <- interval_constructor_linear()
+      theta0 <- ifelse(is.null(object$parameters$theta0), 0, object$parameters$theta0)
     }
-
-    # Default value of theta is alpha
-    theta0 <- ifelse(is.null(object$parameters$theta0), object$alpha, object$parameters$theta0)
 
     object$internal <- list(
       theta = c(theta0),
@@ -71,7 +73,7 @@ update_rolling_rc <- function(object, Y, predictions, training = FALSE) {
   return(object)
 }
 
-#' Generate a prediction interval
+# Generate a prediction interval
 predict_rolling_rc <- function(object, prediction) {
   object$internal$interval_constructor(prediction, tail(object$internal$theta, 1), object)
 }

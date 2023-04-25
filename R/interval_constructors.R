@@ -1,9 +1,9 @@
 interval_constructor_conformity <- function(conformity_score) {
-  if(conformity_score == "absolute_error") {
-    score <- conformity_score_absolute_error
-  }
-  else if(is.function(conformity_score)) {
+  if(is.function(conformity_score)) {
     score <- conformity_score
+  }
+  else if(conformity_score == "absolute_error") {
+    score <- conformity_score_absolute_error
   }
 
   function(prediction, theta, object) {
@@ -17,9 +17,15 @@ interval_constructor_conformity <- function(conformity_score) {
 interval_constructor_linear <- function() {
   function(prediction, theta, object) {
     if(length(prediction) == 1) {
+      if(theta < 0) {
+        return(c(prediction[1], prediction[1]))
+      }
       return(c(prediction[1] - theta, prediction[1] + theta))
     }
     else if(length(prediction) == 2) {
+      if((prediction[1] - theta) > (prediction[2] + theta)) {
+        theta <- (prediction[1] - prediction[2]) / 2
+      }
       return(c(prediction[1] - theta, prediction[2] + theta))
     }
   }

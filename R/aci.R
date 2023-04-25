@@ -1,44 +1,89 @@
 #' Initialize an Adaptive Conformal Inference algorithm.
 #'
-#' @param Y optional vector of observations
-#' @param predictions optional vector of predictions
-#' @param training optional boolean indicating if the supplied Y and prediction values should be treated as training data (not used to update ACI parameters, but used in e.g. calculating conformity scores)
-#' @param alpha desired level o
-#' @param method a string specificying the Adaptive Conformal Inference method to use.
-#' The available methods are:
-#' \describe{
-#'    \item{'RollingRC'}{Rolling Risk Control \insertCite{feldman2022rolling}.
-#'    Requires specification of a positive learning rate \strong{gamma}.}
-#'    \item{'AgACI'}{Aggregated ACI \insertCite{zaffran2022agaci}.
-#'    Multiple ACI algorithms are executed for a grid of learning rates, and the resulting intervals are combined using the Bernstein Online Aggregation method
-#'    for online aggregation of experts.}
-#'    \item{'FACI'}{Fully Adaptive Conformal Inference \insertCite{gibbs2022faci}.}
-#' }
+#' @param Y optional vector of observations.
+#' @param predictions optional vector or matrix of predictions.
+#' @param training optional boolean indicating if the supplied Y and prediction values should be treated as training data (not used to update ACI parameters, but used in e.g. calculating conformity scores).
+#' @param alpha desired empirical coverage. That is, the method will target alpha * 100\% prediction intervals.
+#' @param method a string specifying the Adaptive Conformal Inference method to use.
+#'   The available methods are:
+#'   \describe{
+#'      \item{'RollingRC'}{Rolling Risk Control \insertCite{feldman2023rollingrisk}{AdaptiveConformal}.
+#'      Requires specification of a positive learning rate gamma.}
+#'      \item{'AgACI'}{Aggregated ACI \insertCite{zaffran2022agaci}{AdaptiveConformal}.
+#'      Multiple ACI algorithms are executed for a grid of learning rates, and the resulting intervals are combined using the Bernstein Online Aggregation method
+#'      for online aggregation of experts.}
+#'      \item{'FACI'}{Fully Adaptive Conformal Inference \insertCite{gibbs2022faci}{AdaptiveConformal}.}
+#'   }
 #' @param parameters a list of parameters that depend on the chosen ACI method.
 #' \describe{
 #'    \item{gamma}{A positive number specifying the learning rate. For method "RollingRC".}
 #'    \item{gamma_grid}{A grid of positive learning rates. For method "AgACI" and "FACI.}
+#'    \item{theta0}{Initial value for theta parameter.}
 #'    \item{interval_constructor}{
 #'      Specifies how the prediction intervals are to be formed. Only for "RollingRC" and "AgACI". For "FACI", it is always set to "conformal".
-#'      \begin{itemize}
+#'      \itemize{
+#'        \item "conformal": the interval is formed as [prediction - S, prediction + S], where S is the theta*100\% quantile of the previously observed.
+#'        This is the default for "RollingRC" and "AgACI".
 #'        \item "linear": the interval is formed as [prediction - theta, prediction + theta].
-#'        \item "conformal": the interval is formed as [prediction - S, prediction + S], where S is the theta*100% quantile of the previously observed
 #'        conformity scores.
-#'        \item A function that takes a prediction and a parameter theta (that is learned online) and returns a candidate prediction interval.
-#'      \end{itemize}
+#'        \item A function (see details)
+#'      }
 #'    }
 #'    \item{conformity_score}{
 #'      Specifies the conformity scores to use for constructing prediction intervals. Only applicable if interval_constructor = "conformal".
 #'      Current options are:
-#'      \begin{align}
-#'        \item "absolute_error": S = |Y - prediction|
-#'        \item A function taking an observation Y and prediction and returning a conformity score.
-#'      \end{align}
+#'      \itemize{
+#'        \item "absolute_error": S_t = |Y_t - prediction_t|. This is the default.
+#'        \item A function (see details)
+#'      }
 #'    }
 #' }
+#' @details
+#'   The prediction intervals are formed by an \emph{interval constructor} function.
+#'   A custom interval constructor can be supplied as a function of the form
+#'   \code{function(prediction, theta, object)} where \code{prediction} is the predicted value of the outcome,
+#'   \code{theta} is a parameter that controls the size of the interval, and \code{object} is an ACI object.
+#'
+#'   The "conformal" interval constructor forms intervals using quantiles of the previous \emph{conformity scores} of
+#'   the predicted outcomes. The default conformity score is the absolute residual: S_t = |Y_t - prediction_t|, where S_t is the
+#'   conformity score, Y_t is the observed value, and prediction_t is the predicted value.
+#'   A custom conformity score can be supplied as a function of the form
+#'   \code{function(Y, prediction)}.
+#'
+#' @returns
+#' An object with class "aci". Important parameters include:
+#' \describe{
+#'   \item{intervals}{A matrix that contains the prediction intervals generated by the method.}
+#'   \item{covered}{A logical vector indicating if each observation was within (TRUE) or outside (FALSE) the prediction interval.}
+#'   \item{training}{A logical vector indicating if each observation and prediction was used solely as context for the method (TRUE)
+#'   or if they were used to update the underlying ACI method (FALSE)}.
+#' }
+#'
+#' @examples
+#' # Generate a simple time series of observations
+#' N <- 1e3
+#' Y <- rnorm(N)
+#' predictions <- rep(0, N) # predict 0 at very timestep
+#'
+#' # Apply Rolling Risk Control algorithm with learning rate gamma = 0.01
+#' # with goal of 90\% prediction intervals
+#' result <- aci(Y, predictions, method = "RollingRC", alpha = 0.9,
+#'               parameters = list(gamma = 0.01))
+#' summary(result)
+#'
+#' # Supply a custom conformity score function
+#' conformity_score_squared_error <- function(Y, prediction) (Y - prediction)^2
+#' result <- aci(Y, predictions, method = "RollingRC", alpha = 0.9,
+#'               parameters = list(gamma = 0.01, conformity_score = conformity_score_squared_error))
+#' summary(result)
+#'
+#' @references
+#'   \insertAllCited{}
+#'
+#' @importFrom Rdpack reprompt
 #'
 #' @export
-aci <- function(Y = NULL, predictions = NULL, training = FALSE, alpha = 0.95, method = "ACI", parameters = list()) {
+aci <- function(Y = NULL, predictions = NULL, training = FALSE, alpha = 0.95, method = "AgACI", parameters = list()) {
   method <- match.arg(method, c("AgACI", "RollingRC", "FACI"))
 
   object <- list(
@@ -88,7 +133,9 @@ predict.aci <- function(object, prediction) {
     FACI = predict_faci
   )
 
-  funs[[method]](object, prediction)
+  interval <- funs[[method]](object, prediction)
+  names(interval) <- c(paste0((1 - object$alpha) / 2 * 100, "%"), paste0((1 - (1 - object$alpha) / 2) * 100, "%"))
+  interval
 }
 
 
@@ -108,7 +155,6 @@ print.aci <- function(object) {
 #' @export
 summary.aci <- function(object) {
   observed <- object$training == FALSE
-
 
   N_intervals <- sum(observed)
   within <- sum(object$Y[observed] >= object$intervals[observed, 1] & object$Y[observed] <= object$intervals[observed, 2])

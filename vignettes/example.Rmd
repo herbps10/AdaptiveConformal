@@ -47,7 +47,7 @@ For this vignette, we'll train the results first as an initial step and then app
 
 We start the result training at $t^* = 250$ so that the SARIMA results have enough data to work with.
 
-```{r}
+```{r, cache = TRUE}
 predictions <- rep(NA, length(Y))
 t_star <- 250
 for(t in t_star:length(Y)) {

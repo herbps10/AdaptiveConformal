@@ -12,7 +12,48 @@
 \item{newY}{new observation}
 
 \item{newpredictions}{new predictions}
+
+\item{training}{boolean indicating whether to use new observations and predictions solely as training (TRUE)
+or to also update the ACI method (TRUE)}
 }
 \description{
 Update an ACI object with a new observation
+}
+\examples{
+# Generate a simple time series of observations
+N <- 1e3
+Y <- rnorm(N)
+predictions <- rep(0, N) # predict 0 at very timestep
+
+# Initialize Rolling Risk Control algorithm
+result <- aci(method = "RollingRC", parameters = list(gamma = 0.01))
+
+# Observe outcomes one at a time and update ACI method
+for(t in 1:N) {
+  result <- update(result, newY = Y[t], newpredictions = predictions[t])
+}
+
+summary(result)
+
+# Alternatively, multiple observations and predictions can be supplied to
+# the update function at the same time
+result <- aci(method = "RollingRC", parameters = list(gamma = 0.01))
+
+# Observe outcomes one at a time and update ACI method
+result <- update(result, newY = Y, newpredictions = predictions)
+
+summary(result)
+
+# We may have some initial observations and predictions we would like to use
+# as context (e.g. for calculating conformity scores) but we do not want to use
+# in the online learning algorithm for ACI.
+# For example, suppose that we want to use the first 500 observations as context,
+# and only generate intervals for the second 500 observations.
+result <- aci(method = "RollingRC", parameters = list(gamma = 0.01))
+
+result <- update(result, newY = Y[1:500], newpredictions = predictions[1:500], training = TRUE)
+result <- update(result, newY = Y[501:1000], newpredictions = predictions[501:1000])
+
+summary(result)
+
 }

@@ -1,4 +1,5 @@
-#' Absolute error conformity score: S_t := |Y_t - \hat{Y}_t|
+#' Absolute error conformity score: S_t := |Y_t - \eqn{\hat{Y}}{prediction}_t|
+#'
 #' @param Y observed value
 #' @param prediction predicted value
 #'

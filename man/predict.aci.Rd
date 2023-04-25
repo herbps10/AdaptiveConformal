@@ -4,12 +4,14 @@
 \alias{predict.aci}
 \title{Compute a conformal prediction interval}
 \usage{
-\method{predict}{aci}(object, prediction)
+\method{predict}{aci}(object, prediction, ...)
 }
 \arguments{
 \item{object}{object of class "aci"}
 
 \item{prediction}{vector or matrix of predictions to use for forming the conformal prediction interval}
+
+\item{...}{additional arguments (currently ignored)}
 }
 \description{
 Compute a conformal prediction interval

@@ -4,10 +4,12 @@
 \alias{print.aci}
 \title{Print an ACI object}
 \usage{
-\method{print}{aci}(object)
+\method{print}{aci}(x, ...)
 }
 \arguments{
-\item{object}{object of class "aci"}
+\item{x}{object of class "aci"}
+
+\item{...}{additional arguments (currently ignored)}
 }
 \description{
 Print an ACI object

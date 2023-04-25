@@ -112,7 +112,7 @@ aci <- function(Y = NULL, predictions = NULL, training = FALSE, alpha = 0.95, me
   class(object) <- "aci"
 
   if(!is.null(Y) || !is.null(predictions)) {
-    object <- update(object, newY = Y, newpredictions = predictions, training = training)
+    object <- update.aci(object, newY = Y, newpredictions = predictions, training = training)
   }
 
   return(object)
@@ -122,9 +122,9 @@ aci <- function(Y = NULL, predictions = NULL, training = FALSE, alpha = 0.95, me
 #'
 #' @param object object of class "aci"
 #' @param prediction vector or matrix of predictions to use for forming the conformal prediction interval
-#'
+#' @param ... additional arguments (currently ignored)
 #' @export
-predict.aci <- function(object, prediction) {
+predict.aci <- function(object, prediction, ...) {
   method <- match.arg(object$method, c("AgACI", "RollingRC", "FACI"))
 
   funs <- list(
@@ -141,19 +141,21 @@ predict.aci <- function(object, prediction) {
 
 #' Print an ACI object
 #'
-#' @param object object of class "aci"
+#' @param x object of class "aci"
+#' @param ... additional arguments (currently ignored)
 #'
 #' @export
-print.aci <- function(object) {
-  cat(paste0("ACI object with ", length(object$Y), " observations.\n"))
+print.aci <- function(x, ...) {
+  cat(paste0("ACI object with ", length(x$Y), " observations.\n"))
 }
 
 #' Summary of an ACI object
 #'
 #' @param object object of class "aci"
+#' @param ... additional arguments (currently ignored)
 #'
 #' @export
-summary.aci <- function(object) {
+summary.aci <- function(object, ...) {
   observed <- object$training == FALSE
 
   N_intervals <- sum(observed)

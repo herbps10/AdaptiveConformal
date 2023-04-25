@@ -37,6 +37,7 @@ initialize_ag_aci <- function(object) {
   return(object)
 }
 
+#' @importFrom utils tail
 update_ag_aci <- function(object, Y, predictions, training = FALSE) {
   n <- length(Y)
   prediction_matrix <- is.matrix(predictions)
@@ -53,18 +54,18 @@ update_ag_aci <- function(object, Y, predictions, training = FALSE) {
     object$intervals <- rbind(object$intervals, matrix(rep(NA, 2 * length(Y)), ncol = 2, nrow = length(Y)))
 
     # Update each of the candidate ACIs
-    object$internal$candidate_acis <- lapply(object$internal$candidate_acis, update, newY = Y, newpredictions = predictions, training = training)
+    object$internal$candidate_acis <- lapply(object$internal$candidate_acis, update.aci, newY = Y, newpredictions = predictions, training = training)
   }
   else {
     # Update each of the candidate ACIs
-    object$internal$candidate_acis <- lapply(object$internal$candidate_acis, update, newY = Y, newpredictions = predictions, training = training)
+    object$internal$candidate_acis <- lapply(object$internal$candidate_acis, update.aci, newY = Y, newpredictions = predictions, training = training)
 
     lower_candidates <- matrix(unlist(lapply(object$internal$candidate_acis, function(aci) tail(aci$intervals[, 1], n))), nrow = n, byrow = FALSE)
     upper_candidates <- matrix(unlist(lapply(object$internal$candidate_acis, function(aci) tail(aci$intervals[, 2], n))), nrow = n, byrow = FALSE)
 
     # Update the expert aggregation methods
-    object$internal$experts$lower <- predict(object$internal$experts$lower, newexperts = lower_candidates, newY = Y, type = "model")
-    object$internal$experts$upper <- predict(object$internal$experts$upper, newexperts = upper_candidates, newY = Y, type = "model")
+    object$internal$experts$lower <- predict.aci(object$internal$experts$lower, newexperts = lower_candidates, newY = Y, type = "model")
+    object$internal$experts$upper <- predict.aci(object$internal$experts$upper, newexperts = upper_candidates, newY = Y, type = "model")
 
     intervals <- matrix(c(
       tail(object$internal$experts$lower$prediction, length(Y)),

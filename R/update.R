@@ -5,6 +5,7 @@
 #' @param newpredictions new predictions
 #' @param training boolean indicating whether to use new observations and predictions solely as training (TRUE)
 #' or to also update the ACI method (TRUE)
+#' @param ... additional arguments (currently)
 #'
 #' @examples
 #' # Generate a simple time series of observations
@@ -44,7 +45,7 @@
 #' summary(result)
 #'
 #' @export
-update.aci <- function(object, newY, newpredictions, training = FALSE) {
+update.aci <- function(object, newY, newpredictions, training = FALSE, ...) {
   method <- match.arg(object$method, c("RollingRC", "AgACI", "FACI"))
 
   n <- length(newY)

@@ -4,10 +4,12 @@
 \alias{summary.aci}
 \title{Summary of an ACI object}
 \usage{
-\method{summary}{aci}(object)
+\method{summary}{aci}(object, ...)
 }
 \arguments{
 \item{object}{object of class "aci"}
+
+\item{...}{additional arguments (currently ignored)}
 }
 \description{
 Summary of an ACI object

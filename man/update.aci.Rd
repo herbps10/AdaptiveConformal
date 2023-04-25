@@ -4,7 +4,7 @@
 \alias{update.aci}
 \title{Update an ACI object with a new observation}
 \usage{
-\method{update}{aci}(object, newY, newpredictions, training = FALSE)
+\method{update}{aci}(object, newY, newpredictions, training = FALSE, ...)
 }
 \arguments{
 \item{object}{object of class "aci"}
@@ -15,6 +15,8 @@
 
 \item{training}{boolean indicating whether to use new observations and predictions solely as training (TRUE)
 or to also update the ACI method (TRUE)}
+
+\item{...}{additional arguments (currently)}
 }
 \description{
 Update an ACI object with a new observation

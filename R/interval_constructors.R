@@ -1,3 +1,4 @@
+#' @importFrom stats quantile
 interval_constructor_conformity <- function(conformity_score) {
   if(is.function(conformity_score)) {
     score <- conformity_score

@@ -38,6 +38,7 @@ initialize_ag_aci <- function(object) {
 }
 
 #' @importFrom utils tail
+#' @importFrom stats predict
 update_ag_aci <- function(object, Y, predictions, training = FALSE) {
   n <- length(Y)
   prediction_matrix <- is.matrix(predictions)
@@ -64,8 +65,8 @@ update_ag_aci <- function(object, Y, predictions, training = FALSE) {
     upper_candidates <- matrix(unlist(lapply(object$internal$candidate_acis, function(aci) tail(aci$intervals[, 2], n))), nrow = n, byrow = FALSE)
 
     # Update the expert aggregation methods
-    object$internal$experts$lower <- predict.aci(object$internal$experts$lower, newexperts = lower_candidates, newY = Y, type = "model")
-    object$internal$experts$upper <- predict.aci(object$internal$experts$upper, newexperts = upper_candidates, newY = Y, type = "model")
+    object$internal$experts$lower <- predict(object$internal$experts$lower, newexperts = lower_candidates, newY = Y, type = "model")
+    object$internal$experts$upper <- predict(object$internal$experts$upper, newexperts = upper_candidates, newY = Y, type = "model")
 
     intervals <- matrix(c(
       tail(object$internal$experts$lower$prediction, length(Y)),
@@ -77,7 +78,12 @@ update_ag_aci <- function(object, Y, predictions, training = FALSE) {
     object$intervals   <- rbind(object$intervals, intervals)
     object$covered     <- c(object$covered, covered)
     object$Y           <- c(object$Y, Y)
-    object$predictions <- base::rbind(object$predictions, predictions)
+    if(is.matrix(predictions)) {
+      object$predictions <- base::rbind(object$predictions, predictions)
+    }
+    else {
+      object$predictions <- base::rbind(object$predictions, matrix(predictions, ncol = 1))
+    }
   }
 
   return(object)

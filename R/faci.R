@@ -1,28 +1,33 @@
 # Initialize a FACI object
 initialize_faci <- function(object) {
-  if(is.null(object$internal)) {
-    I <- 250
+  default_parameters <- list(
+    I = 250,
+    gamma = 0.01,
+    interval_constructor = "conformal",
+    conformity_score = "absolute_error",
+    gamma_grid = c(0.001, 0.002, 0.004, 0.008, 0.016, 0.032, 0.064, 0.128),
+    conditional = FALSE
+  )
 
-    if(is.null(object$parameters$interval_constructor)) {
-      object$parameters$interval_constructor <- "conformity"
+  if(is.null(object$internal)) {
+    for(n in names(default_parameters)) {
+      if(is.null(object$parameters[[n]])) {
+        object$parameters[[n]] <- default_parameters[[n]]
+      }
     }
 
     interval_constructor <- interval_constructor_conformity("absolute_error")
-
-    if(is.null(object$parameters$gamma_grid)) {
-      object$parameters$gamma_grid <- c(0.001, 0.002, 0.004, 0.008, 0.016, 0.032, 0.065, 0.128)
-    }
 
     # K is the number of candidate gamma values
     K = length(object$parameters$gamma_grid)
 
     if(is.null(object$parameters$eta)) {
       alpha <- object$alpha
-      object$parameters$eta <- sqrt(3 / I) * sqrt((log(K * I) + 2) / ((1 - alpha)^2 * alpha^3 + alpha^2 * (1 - alpha)^3))
+      object$parameters$eta <- sqrt(3 / object$parameters$I) * sqrt((log(K * object$parameters$I) + 2) / ((1 - alpha)^2 * alpha^3 + alpha^2 * (1 - alpha)^3))
     }
 
     if(is.null(object$parameters$sigma)) {
-      object$parameters$sigma <- 1 / (2 * 500)
+      object$parameters$sigma <- 1 / (2 * object$parameters$I)
     }
 
     if(!is.null(object$parameters$theta0)) {
@@ -64,12 +69,8 @@ loss_faci <- function(alpha, beta, theta) {
 }
 
 # Update FACI with new data
-update_faci <- function(object, Y, predictions, training = FALSE) {
+update_faci <- function(object, Y, predictions, X = NULL, training = FALSE) {
   n <- length(Y)
-  prediction_matrix <- is.matrix(predictions)
-  if(prediction_matrix) {
-    stop("FACI currently does not support predictions in the form of a matrix.")
-  }
 
   if(training == TRUE) {
     object$Y <- c(object$Y, Y)
@@ -129,7 +130,11 @@ update_faci <- function(object, Y, predictions, training = FALSE) {
       object$intervals        <- base::rbind(object$intervals, interval)
       object$Y                <- c(object$Y, Y[index])
       object$covered          <- c(object$covered, covered)
-      object$predictions      <- base::rbind(object$predictions, predictions[index])
+      object$predictions      <- base::rbind(object$predictions, predictions[index,])
+
+      if(!is.null(X)) {
+        object$X <- rbind(object$X, X[index, ])
+      }
     }
   }
 

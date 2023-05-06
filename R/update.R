@@ -45,7 +45,7 @@
 #' summary(result)
 #'
 #' @export
-update.aci <- function(object, newY, newpredictions, training = FALSE, ...) {
+update.aci <- function(object, newY, newpredictions, newX = NULL, training = FALSE, ...) {
   method <- match.arg(object$method, aci_methods())
 
   n <- length(newY)
@@ -66,7 +66,15 @@ update.aci <- function(object, newY, newpredictions, training = FALSE, ...) {
     SAOCP = update_saocp
   )
 
-  object <- updaters[[method]](object, Y = newY, predictions = newpredictions, training = training)
+  if(!is.null(newX) && is.vector(newX)) {
+    newX <- matrix(newX, ncol = length(newX))
+  }
+
+  if(is.vector(newpredictions)) {
+    newpredictions <- matrix(newpredictions, ncol = 1)
+  }
+
+  object <- updaters[[method]](object, Y = newY, predictions = newpredictions, X = newX, training = training)
 
   object$training <- c(object$training, rep(training, length(newY)))
 
@@ -84,8 +92,8 @@ compute_metrics <- function(object) {
   object$below <- mean(object$Y[observed] < object$intervals[observed, 1])
   object$above <- mean(object$Y[observed] > object$intervals[observed, 2])
 
-  if(!is.null(object$parameters$design_matrix)) {
-    object$conditional_coverage <- (object$covered %*% object$parameters$design_matrix) / colSums(object$parameters$design_matrix)
+  if(!is.null(object$X)) {
+    object$conditional_coverage <- (object$covered %*% object$X) / colSums(object$X)
   }
 
   return(object)

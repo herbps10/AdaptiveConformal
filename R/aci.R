@@ -2,6 +2,7 @@
 #'
 #' @param Y optional vector of observations.
 #' @param predictions optional vector or matrix of predictions.
+#' @param X optional matrix of covariates
 #' @param training optional boolean indicating if the supplied Y and prediction values should be treated as training data (not used to update ACI parameters, but used in e.g. calculating conformity scores).
 #' @param alpha desired empirical coverage. That is, the method will target alpha * 100\% prediction intervals.
 #' @param method a string specifying the Adaptive Conformal Inference method to use.
@@ -83,7 +84,7 @@
 #' @importFrom Rdpack reprompt
 #'
 #' @export
-aci <- function(Y = NULL, predictions = NULL, training = FALSE, alpha = 0.95, method = "AgACI", parameters = list()) {
+aci <- function(Y = NULL, predictions = NULL, X = NULL, training = FALSE, alpha = 0.95, method = "AgACI", parameters = list()) {
   method <- match.arg(method, aci_methods())
 
   object <- list(
@@ -91,6 +92,7 @@ aci <- function(Y = NULL, predictions = NULL, training = FALSE, alpha = 0.95, me
     alpha = alpha,
     Y = NULL,
     predictions = NULL,
+    X = NULL,
     intervals = matrix(ncol = 2, nrow = 0),
     covered = numeric(0),
     parameters = parameters,
@@ -100,6 +102,19 @@ aci <- function(Y = NULL, predictions = NULL, training = FALSE, alpha = 0.95, me
     mean_interval_loss = NULL,
     training = logical(0)
   )
+
+  if(is.null(X)) {
+    object$X <- matrix(ncol = 0, nrow = 0)
+  }
+  else {
+    object$X <- matrix(ncol = ncol(X), nrow = 0)
+  }
+
+  if(!is.null(predictions)) {
+    if(is.vector(predictions)) {
+      predictions <- matrix(predictions, ncol = 1)
+    }
+  }
 
   initializers <- list(
     RollingRC = initialize_rolling_rc,
@@ -115,7 +130,7 @@ aci <- function(Y = NULL, predictions = NULL, training = FALSE, alpha = 0.95, me
   class(object) <- "aci"
 
   if(!is.null(Y) || !is.null(predictions)) {
-    object <- update.aci(object, newY = Y, newpredictions = predictions, training = training)
+    object <- update.aci(object, newY = Y, newpredictions = predictions, newX = X, training = training)
   }
 
   return(object)
@@ -129,7 +144,7 @@ aci_methods <- function() c("AgACI", "RollingRC", "FACI", "GACI", "SF-OGD", "SAO
 #' @param prediction vector or matrix of predictions to use for forming the conformal prediction interval
 #' @param ... additional arguments (currently ignored)
 #' @export
-predict.aci <- function(object, prediction, ...) {
+predict.aci <- function(object, prediction = 0, X = NULL, ...) {
   method <- match.arg(object$method, aci_methods())
 
   funs <- list(
@@ -141,7 +156,11 @@ predict.aci <- function(object, prediction, ...) {
     SAOCP = predict_saocp
   )
 
-  interval <- funs[[method]](object, prediction)
+  if(!is.null(X) && is.vector(X)) {
+    X <- matrix(X, ncol = length(X))
+  }
+
+  interval <- funs[[method]](object, prediction, X)
   names(interval) <- c(paste0((1 - object$alpha) / 2 * 100, "%"), paste0((1 - (1 - object$alpha) / 2) * 100, "%"))
   interval
 }
@@ -178,7 +197,7 @@ summary.aci <- function(object, ...) {
     cat(paste0("Mean interval width: ", format(round(object$mean_width, 3)), "\n"))
     cat(paste0("Mean interval loss: ", format(round(object$mean_interval_loss, 3)), "\n"))
 
-    if(!is.null(object$parameters$design_matrix)) {
+    if(!is.null(object$X) && nrow(object$X) > 0) {
       cat(paste0("Conditional coverage: \n"))
       for(index in 1:length(object$conditional_coverage)) {
         cat(paste0(colnames(object$conditional_coverage)[index], ":\t", format(round(object$conditional_coverage[index] * 100, 2)), "%\n"))

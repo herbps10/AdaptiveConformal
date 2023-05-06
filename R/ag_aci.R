@@ -1,8 +1,18 @@
 #'
 initialize_ag_aci <- function(object) {
+  default_parameters <- list(
+    gamma = 0.01,
+    interval_constructor = "conformal",
+    conformity_score = "absolute_error",
+    gamma_grid = c(0.001, 0.002, 0.004, 0.008, 0.016, 0.032, 0.064, 0.128),
+    conditional = FALSE
+  )
+
   if(is.null(object$internal)) {
-    if(is.null(object$parameters$gamma_grid)) {
-      object$parameters$gamma_grid <- c(0.001, 0.002, 0.004, 0.008, 0.016, 0.032, 0.065, 0.128)
+    for(n in names(default_parameters)) {
+      if(is.null(object$parameters[[n]])) {
+        object$parameters[[n]] <- default_parameters[[n]]
+      }
     }
 
     theta0 <- ifelse(object$parameters$interval_constructor == "conformal", object$alpha, 0)
@@ -39,7 +49,7 @@ initialize_ag_aci <- function(object) {
 
 #' @importFrom utils tail
 #' @importFrom stats predict
-update_ag_aci <- function(object, Y, predictions, training = FALSE) {
+update_ag_aci <- function(object, Y, predictions, X = NULL, training = FALSE) {
   n <- length(Y)
   prediction_matrix <- is.matrix(predictions)
 
@@ -78,6 +88,9 @@ update_ag_aci <- function(object, Y, predictions, training = FALSE) {
     object$intervals   <- rbind(object$intervals, intervals)
     object$covered     <- c(object$covered, covered)
     object$Y           <- c(object$Y, Y)
+    if(!is.null(X)) {
+      object$X <- rbind(object$X, X)
+    }
     if(is.matrix(predictions)) {
       object$predictions <- base::rbind(object$predictions, predictions)
     }
@@ -89,7 +102,7 @@ update_ag_aci <- function(object, Y, predictions, training = FALSE) {
   return(object)
 }
 
-predict_ag_aci <- function(object, prediction) {
+predict_ag_aci <- function(object, prediction, X = NULL) {
   # Collect the predictions of each of the candidate ACIs
   candidate_intervals <- matrix(
     unlist(lapply(object$internal$candidate_acis, predict.aci, prediction)),

@@ -7,35 +7,37 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
+  fig.width = 7,
+  fig.height = 5,
   comment = "#>"
 )
-```
 
-```{r setup}
 library(AdaptiveConformal)
+
 ```
 
 In this vignette, we will produce conformal prediction intervals for French electricity demand data from the [`opera`](https://cran.r-project.org/web/packages/opera/index.html) package.
 
-```{r}
+```{r load_data}
 data(electric_load, package = "opera")
 ```
 
 The dataset comprise weekly observations of total electricity consumption in France from 1996 to 2009. 
-```{r}
+```{r extract_Y}
 Y <- ts(electric_load$Load, frequency = 52, start = 1996)
 ```
 
-```{r}
+```{r plot_Y}
 plot(Y, ylab = "Electricity consumption")
 ```
 
 Let $Y_t$ be the electricity demand at time $t$ for $t = 1, \dots, T$. 
 
 We generate predictions and prediction intervals in the following procedure. Set $t^* \geq 1$ to the first year in which predictions will be generated.
+
 - For $t = t^*, \dots, T$:
   - Train a result $\mathcal{M}_t$ to predict $Y_t$ using only the data $Y_1, \dots, Y_{t-1}$.
   - Generate a prediction $\hat{Y}_t$ using $\mathcal{M}_t$.
@@ -43,13 +45,11 @@ We generate predictions and prediction intervals in the following procedure. Set
   - Observe the true observation $Y_t$ and update the ACI algorithm accordingly. 
 
 ## Predictions
-For this vignette, we'll train the results first as an initial step and then apply several ACI methods as a second step. 
+For this vignette, we'll train the results first as an initial step and then apply several ACI methods as a second step. As a predictive method we will use [SARIMA](https://en.wikipedia.org/wiki/Autoregressive_integrated_moving_average) as implemented in the `forecast::auto.arima` function. We start predicting the weekly electricity load at at $t^* = 350$ so that the SARIMA model has enough data to work with.
 
-We start the result training at $t^* = 250$ so that the SARIMA results have enough data to work with.
-
-```{r, cache = TRUE}
+```{r predictions, cache = TRUE}
 predictions <- rep(NA, length(Y))
-t_star <- 250
+t_star <- 350
 for(t in t_star:length(Y)) {
   # Fit a SARIMA result 
   fit <- forecast::Arima(
@@ -64,7 +64,7 @@ for(t in t_star:length(Y)) {
 ```
 
 Here is what the one-step-ahead predictions look like compared to the observed data.
-```{r}
+```{r plot_predictions}
 plot(Y, ylab = "Electricity consumption")
 lines(ts(predictions, frequency = 52, start = 1996), col = "red")
 legend("topleft", legend = c("Observations", "Predictions"), fill = c("black", "red"))
@@ -72,17 +72,17 @@ legend("topleft", legend = c("Observations", "Predictions"), fill = c("black", "
 
 ## Conformal Prediction Intervals
 We start by initializing the ACI object, targeting $\alpha = 90\%$ prediction intervals. The first method we will apply is the `AgACI` method. This method requires specifying a grid of learning rates to use to generate candidate prediction intervals. The candidate intervals are then combined using an online expert aggregation method.
-```{r}
+```{r initialize_agaci}
 result <- aci(method = "AgACI", alpha = 0.9)
 ```
 
 Next, we update the ACI method with the online predictions and observed data.
-```{r}
+```{r update_agaci}
 result <- update(result, newY = Y[t_star:length(Y)], newpredictions = predictions[t_star:length(Y)])
 ```
 
 Note that we could also build the result by supplying the observations one at a time, which may be useful in a true online or streaming scenario where we receive the observations sequentially.
-```{r}
+```{r initialize_and_update_agaci_iteratively}
 result <- aci(method = "AgACI", alpha = 0.9)
 for(t in t_star:length(Y)) {
   result <- update(result, newY = Y[t], newpredictions = predictions[t])
@@ -90,22 +90,22 @@ for(t in t_star:length(Y)) {
 ```
 
 We can print a summary to see some basic information about the results, including the empirical coverage and mean interval width.
-```{r}
+```{r agaci_summary}
 summary(result)
 ```
 
 We can also plot the observations and the conformal prediction intervals.
-```{r}
+```{r agaci_plot}
 plot(result)
 ```
 
 Let's zoom in on a smaller section so we can see the prediction intervals more clearly:
-```{r}
+```{r agaci_plot_zoom}
 plot(result, index = 200:300)
 ```
 
 Next, we can try a different ACI method: Fully Adaptive Conformal Inference (FACI). We'll also supply the data directly when we create the ACI object this time, instead of calling the `update` method afterwards.
-```{r}
+```{r faci}
 result_faci <- aci(
   Y[t_star:length(Y)],
   predictions[t_star:length(Y)],
@@ -114,20 +114,20 @@ result_faci <- aci(
 )
 ```
 
-```{r}
+```{r faci_summary}
 summary(result_faci)
 ```
 
-```{r}
+```{r faci_plot}
 plot(result_faci)
 ```
 
-```{r}
+```{r faci_plot_zoom}
 plot(result_faci, index = 200:300)
 ```
 
 If we plot the results from both the AgACI and the FACI methods, we see that they yield quite similar prediction intervals.
-```{r}
+```{r comparison_plot}
 plot(result$Y[200:300], ylim = c(30e3, 85e3))
 
 # AgACI

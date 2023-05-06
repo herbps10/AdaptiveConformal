@@ -84,7 +84,7 @@
 #'
 #' @export
 aci <- function(Y = NULL, predictions = NULL, training = FALSE, alpha = 0.95, method = "AgACI", parameters = list()) {
-  method <- match.arg(method, c("AgACI", "RollingRC", "FACI"))
+  method <- match.arg(method, aci_methods())
 
   object <- list(
     method = method,
@@ -104,7 +104,10 @@ aci <- function(Y = NULL, predictions = NULL, training = FALSE, alpha = 0.95, me
   initializers <- list(
     RollingRC = initialize_rolling_rc,
     AgACI = initialize_ag_aci,
-    FACI = initialize_faci
+    FACI = initialize_faci,
+    GACI = initialize_gaci,
+    "SF-OGD" = initialize_sfogd,
+    SAOCP = initialize_saocp
   )
 
   object <- initializers[[method]](object)
@@ -118,6 +121,8 @@ aci <- function(Y = NULL, predictions = NULL, training = FALSE, alpha = 0.95, me
   return(object)
 }
 
+aci_methods <- function() c("AgACI", "RollingRC", "FACI", "GACI", "SF-OGD", "SAOCP")
+
 #' Compute a conformal prediction interval
 #'
 #' @param object object of class "aci"
@@ -125,12 +130,15 @@ aci <- function(Y = NULL, predictions = NULL, training = FALSE, alpha = 0.95, me
 #' @param ... additional arguments (currently ignored)
 #' @export
 predict.aci <- function(object, prediction, ...) {
-  method <- match.arg(object$method, c("AgACI", "RollingRC", "FACI"))
+  method <- match.arg(object$method, aci_methods())
 
   funs <- list(
     RollingRC = predict_rolling_rc,
     AgACI = predict_ag_aci,
-    FACI = predict_faci
+    FACI = predict_faci,
+    GACI = predict_gaci,
+    "SF-OGD" = predict_sfogd,
+    SAOCP = predict_saocp
   )
 
   interval <- funs[[method]](object, prediction)
@@ -146,7 +154,7 @@ predict.aci <- function(object, prediction, ...) {
 #'
 #' @export
 print.aci <- function(x, ...) {
-  cat(paste0("ACI object with ", length(x$Y), " observations.\n"))
+  cat(paste0("ACI object (method=", x$method, ") with ", length(x$Y), " observations.\n"))
 }
 
 #' Summary of an ACI object
@@ -167,7 +175,14 @@ summary.aci <- function(object, ...) {
   }
   else {
     cat(paste0("Empirical coverage: ", format(round(object$coverage * 100, 2)), "% (", within, "/", N_intervals, ")\n"))
-    cat(paste0("Mean interval width: ", format(round(object$mean_width, 2)), "\n"))
-    cat(paste0("Mean interval loss: ", format(round(object$mean_interval_loss, 2)), "\n"))
+    cat(paste0("Mean interval width: ", format(round(object$mean_width, 3)), "\n"))
+    cat(paste0("Mean interval loss: ", format(round(object$mean_interval_loss, 3)), "\n"))
+
+    if(!is.null(object$parameters$design_matrix)) {
+      cat(paste0("Conditional coverage: \n"))
+      for(index in 1:length(object$conditional_coverage)) {
+        cat(paste0(colnames(object$conditional_coverage)[index], ":\t", format(round(object$conditional_coverage[index] * 100, 2)), "%\n"))
+      }
+    }
   }
 }

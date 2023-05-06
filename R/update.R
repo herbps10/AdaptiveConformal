@@ -46,7 +46,7 @@
 #'
 #' @export
 update.aci <- function(object, newY, newpredictions, training = FALSE, ...) {
-  method <- match.arg(object$method, c("RollingRC", "AgACI", "FACI"))
+  method <- match.arg(object$method, aci_methods())
 
   n <- length(newY)
   prediction_matrix <- is.matrix(newpredictions)
@@ -60,7 +60,10 @@ update.aci <- function(object, newY, newpredictions, training = FALSE, ...) {
   updaters <- list(
     RollingRC  = update_rolling_rc,
     AgACI = update_ag_aci,
-    FACI  = update_faci
+    FACI  = update_faci,
+    GACI  = update_gaci,
+    "SF-OGD" = update_sfogd,
+    SAOCP = update_saocp
   )
 
   object <- updaters[[method]](object, Y = newY, predictions = newpredictions, training = training)
@@ -68,10 +71,22 @@ update.aci <- function(object, newY, newpredictions, training = FALSE, ...) {
   object$training <- c(object$training, rep(training, length(newY)))
 
   # Calculate metrics
+  object <- compute_metrics(object)
+
+  object
+}
+
+compute_metrics <- function(object) {
   observed <- object$training == FALSE
   object$coverage <- mean(object$covered[observed])
   object$mean_width <- mean(object$intervals[observed, 2] - object$intervals[observed, 1])
   object$mean_interval_loss <- mean(interval_loss(object$Y[observed], object$intervals[observed, 1], object$intervals[observed, 2], object$alpha))
+  object$below <- mean(object$Y[observed] < object$intervals[observed, 1])
+  object$above <- mean(object$Y[observed] > object$intervals[observed, 2])
 
-  object
+  if(!is.null(object$parameters$design_matrix)) {
+    object$conditional_coverage <- (object$covered %*% object$parameters$design_matrix) / colSums(object$parameters$design_matrix)
+  }
+
+  return(object)
 }

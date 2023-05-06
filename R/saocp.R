@@ -15,13 +15,26 @@ initialize_saocp <- function(object) {
 
     if(tolower(object$parameters$interval_constructor) == "conformal") {
       interval_constructor <- interval_constructor_conformity(object$parameters$conformity_score)
+      theta0 <- 0
     }
     else if(tolower(object$parameters$interval_constructor) == "linear") {
       interval_constructor <- interval_constructor_linear()
+      theta0 <- 0
+    }
+    else if(tolower(object$parameters$interval_constructor) == "asymmetric") {
+      interval_constructor <- interval_constructor_asymmetric()
+      if(is.null(object$parameters$theta0)) {
+        theta0 <- c(0, 0)
+      }
+      else {
+        theta0 <- rep(object$parameters$theta0, length.out = 2)
+      }
     }
 
     object$internal <- list(
       experts = list(),
+      theta0 = theta0,
+      theta = matrix(nrow = 0, ncol = length(theta0)),
       interval_constructor = interval_constructor
     )
   }
@@ -64,7 +77,7 @@ update_saocp <- function(object, Y, predictions, training = FALSE) {
       object$internal$experts[[num_experts]] <- aci(alpha = object$alpha, method = "SF-OGD", parameters = list(
         interval_constructor = object$parameters$interval_constructor,
         gamma = object$parameters$D / sqrt(3),
-        theta0 = ifelse(length(object$internal$theta > 0), saocp_theta(object), 0)
+        theta0 = ifelse(nrow(object$internal$theta > 0), saocp_theta(object), object$internal$theta0)
       ))
       object$internal$experts[[num_experts]]$internal$weight <- 0
       object$internal$experts[[num_experts]]$internal$sum_g <- 0
@@ -79,7 +92,7 @@ update_saocp <- function(object, Y, predictions, training = FALSE) {
 
       # Compute theta
       theta_star <- saocp_theta(object)
-      object$internal$theta <- c(object$internal$theta, theta_star)
+      object$internal$theta <- rbind(object$internal$theta, theta_star)
 
       # Generate a prediction interval
       if(prediction_matrix) {
@@ -88,10 +101,12 @@ update_saocp <- function(object, Y, predictions, training = FALSE) {
       else {
         interval <- predict_saocp(object, predictions[index])
       }
-      object$intervals      <- base::rbind(object$intervals, interval)
+      object$intervals <- base::rbind(object$intervals, interval)
 
       # Check if observation was inside or outside of the prediction interval
-      covered <- Y[index] >= interval[1] && Y[index] <= interval[2]# Generate a prediction interval
+      covered <- Y[index] >= interval[1] && Y[index] <= interval[2]
+      below <- Y[index] < interval[1]
+      above <- Y[index] > interval[2]
 
       conformity_scores <- score(object$predictions, object$Y)
       if(length(conformity_scores) == 0) {
@@ -111,13 +126,27 @@ update_saocp <- function(object, Y, predictions, training = FALSE) {
       }
 
       # Updates
-      #if(t == 100) browser()
-      theta_star_loss <- max(object$alpha * (radius - theta_star), (1 - object$alpha) * (theta_star - radius))
+      if(object$parameters$interval_constructor == "linear") {
+        theta_star_loss <- max(object$alpha * (radius - theta_star), (1 - object$alpha) * (theta_star - radius))
+      }
+      else if(object$parameters$interval_constructor == "asymmetric") {
+        theta_star_loss <- theta_star[2] - theta_star[1] +
+          2/(1 - object$alpha) * (interval[1] - Y[index]) * below +
+          2 / (1 - object$alpha) * (Y[index] - interval[2]) * above
+      }
 
       # Update weights
       object$internal$experts <- lapply(object$internal$experts, function(expert) {
-        expert_theta <- tail(expert$internal$theta, 1)
-        expert_loss <- max(object$alpha * (radius - expert_theta), (1 - object$alpha) * (expert_theta - radius))
+        expert_theta <- expert$internal$theta[nrow(expert$internal$theta),]
+
+        if(object$parameters$interval_constructor == "linear") {
+          expert_loss <- max(object$alpha * (radius - expert_theta), (1 - object$alpha) * (expert_theta - radius))
+        }
+        else {
+          expert_loss <- expert_theta[2] - expert_theta[1] +
+            2/(1 - object$alpha) * (predictions[index] - expert_theta[1] - Y[index]) * below +
+            2 / (1 - object$alpha) * (Y[index] - predictions[index] - expert_theta[2]) * above
+        }
 
         g <- 1 / object$parameters$D * ifelse(expert$internal$weight > 0,
                                               min(max(-1, theta_star_loss - expert_loss), 1),
@@ -162,12 +191,12 @@ saocp_theta <- function(object) {
     phat <- p
   }
 
-  thetas <- unlist(lapply(object$internal$experts, function(x) tail(x$internal$theta, 1)))
+  thetas <- matrix(unlist(lapply(object$internal$experts, function(x) x$internal$theta[nrow(x$internal$theta),])), ncol = ncol(object$internal$theta), byrow = TRUE)
   if(length(thetas) == 0) {
-    theta_star <- 0
+    theta_star <- rep(0, ncol(object$internal$theta))
   }
   else {
-    theta_star <- sum(phat * thetas)
+    theta_star <- phat %*% thetas
   }
   theta_star
 }

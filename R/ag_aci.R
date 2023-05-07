@@ -9,7 +9,7 @@ initialize_ag_aci <- function(object) {
   )
 
   acceptable_parameters <- list(
-    interval_constructor = c("conformal", "linear"),
+    interval_constructor = c("conformal", "linear", "asymmetric"),
     conformity_score = c("absolute_error"),
     conditional = c(FALSE)
   )
@@ -21,7 +21,14 @@ initialize_ag_aci <- function(object) {
       acceptable_parameters
     )
 
-    theta0 <- ifelse(object$parameters$interval_constructor == "conformal", object$alpha, 0)
+    if(tolower(object$parameters$interval_constructor) == "asymmetric") {
+      ntheta <- 2
+    }
+    else {
+      ntheta <- 1
+    }
+
+    theta0 <- rep(ifelse(object$parameters$interval_constructor == "conformal", object$alpha, 0), ntheta)
 
     # Initialize set of candidate learners
     candidate_acis <- lapply(object$parameters$gamma_grid, function(gamma) {
@@ -31,7 +38,7 @@ initialize_ag_aci <- function(object) {
         method = "RollingRC",
         parameters = list(
           gamma = gamma,
-          theta0 = object$alpha,
+          theta0 = theta0,
           interval_constructor = object$parameters$interval_constructor,
           conformity_score = object$parameters$conformity_score
         )

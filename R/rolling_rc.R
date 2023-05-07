@@ -7,7 +7,7 @@ initialize_rolling_rc <- function(object) {
   )
 
   acceptable_parameters <- list(
-    interval_constructor = c("conformal", "linear"),
+    interval_constructor = c("conformal", "linear", "asymmetric"),
     conformity_score = c("absolute_error"),
     conditional = c(FALSE)
   )
@@ -19,17 +19,28 @@ initialize_rolling_rc <- function(object) {
       acceptable_parameters
     )
 
+    if(tolower(object$parameters$interval_constructor) == "asymmetric") {
+      ntheta <- 2
+    }
+    else {
+      ntheta <- 1
+    }
+
     if(tolower(object$parameters$interval_constructor) == "conformal") {
       interval_constructor <- interval_constructor_conformity(object$parameters$conformity_score)
-      theta0 <- ifelse(is.null(object$parameters$theta0), object$alpha, object$parameters$theta0)
+      theta0 <- rep(ifelse(is.null(object$parameters$theta0), object$alpha, object$parameters$theta0), ntheta)
     }
     else if(tolower(object$parameters$interval_constructor) == "linear") {
       interval_constructor <- interval_constructor_linear()
-      theta0 <- ifelse(is.null(object$parameters$theta0), 0, object$parameters$theta0)
+      theta0 <- rep(ifelse(is.null(object$parameters$theta0), 0, object$parameters$theta0), ntheta)
+    }
+    else if(tolower(object$parameters$interval_constructor) == "asymmetric") {
+      interval_constructor <- interval_constructor_asymmetric()
+      theta0 <- rep(ifelse(is.null(object$parameters$theta0), 0, object$parameters$theta0), ntheta)
     }
 
     object$internal <- list(
-      theta = matrix(theta0, ncol = 1),
+      theta = matrix(theta0, ncol = ntheta),
       interval_constructor = interval_constructor
     )
   }
@@ -54,10 +65,20 @@ update_rolling_rc <- function(object, Y, predictions, X = NULL, training = FALSE
       interval <- predict_rolling_rc(object, predictions[index, ])
 
       # Check if observation was inside or outside of the prediction interval
+      below <- Y[index] < interval[1]
+      above <- Y[index] > interval[2]
       covered <- Y[index] >= interval[1] && Y[index] <= interval[2]
 
       # Update theta
-      theta_star <- object$internal$theta[nrow(object$internal$theta), ] + object$parameters$gamma * (1 - covered - (1 - object$alpha))
+      if(object$parameters$interval_constructor == "linear") {
+        theta_star <- object$internal$theta[nrow(object$internal$theta), ] + object$parameters$gamma * (1 - covered - (1 - object$alpha))
+      }
+      else {
+        theta_star <- object$internal$theta[nrow(object$internal$theta), ] + object$parameters$gamma * c(
+          below - (1 - object$alpha) / 2,
+          above - (1 - object$alpha) / 2
+        )
+      }
 
       object$internal$theta <- base::rbind(object$internal$theta, theta_star)
       object$intervals      <- base::rbind(object$intervals, interval)

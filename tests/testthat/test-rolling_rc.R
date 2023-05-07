@@ -11,6 +11,15 @@ test_that("RollingRC: default initialization", {
   expect_equal(result$internal$theta[1], 0.95)
 })
 
+test_that("RollingRC: checks parameters", {
+  expect_no_error(aci(method = "RollingRC", parameters = list(interval_constructor = "linear")))
+  expect_no_error(aci(method = "RollingRC", parameters = list(interval_constructor = "conformal")))
+  expect_error(aci(method = "RollingRC", parameters = list(interval_constructor = "conformity")))
+
+  expect_no_error(aci(method = "RollingRC", parameters = list(conformity_score = "absolute_error")))
+  expect_error(aci(method = "RollingRC", parameters = list(conformity_score = "test")))
+})
+
 test_that("RollingRC: works with data at initialization", {
   result <- aci(c(1, 2, 3), c(0, 1, 2), method = "RollingRC")
 
@@ -71,7 +80,7 @@ test_that("RollingRC: updates with X", {
   expect_equal(result$conditional_coverage, matrix(c(0, 2/3, 0.5), nrow = 1))
 })
 
-test_that("Test multiple iterations of RollingRC with conformity scores", {
+test_that("RollingRC: test multiple iterations with conformity scores", {
   result <- aci(method = "RollingRC")
 
   # Check that theta starts at the right place
@@ -96,4 +105,11 @@ test_that("Test multiple iterations of RollingRC with conformity scores", {
   # Prediction
   expect_equal(unname(predict(result)), c(-1, 1))
   expect_equal(unname(predict(result, prediction = 1)), c(0, 2))
+})
+
+test_that("RollingRC: accepts linear interval constructors", {
+  result <- aci(c(1, 2, 3), c(0, 0, 0), method = "RollingRC", parameters = list(interval_constructor = "linear", gamma = 1))
+
+  expect_equal(result$intervals[, 1], result$predictions[, 1] - result$internal$theta[1:3, 1])
+  expect_equal(result$intervals[, 2], result$predictions[, 1] + result$internal$theta[1:3, 1])
 })

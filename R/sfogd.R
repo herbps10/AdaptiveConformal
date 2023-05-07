@@ -6,12 +6,18 @@ initialize_sfogd <- function(object) {
     conditional = FALSE
   )
 
+  acceptable_parameters <- list(
+    interval_constructor = c("conformal", "linear"),
+    conformity_score = c("absolute_error"),
+    conditional = c(FALSE, TRUE)
+  )
+
   if(is.null(object$internal)) {
-    for(n in names(default_parameters)) {
-      if(is.null(object$parameters[[n]])) {
-        object$parameters[[n]] <- default_parameters[[n]]
-      }
-    }
+    object$parameters <- initialize_parameters(
+      object$parameters,
+      default_parameters,
+      acceptable_parameters
+    )
 
     object$internal$K <- ncol(object$X)
 

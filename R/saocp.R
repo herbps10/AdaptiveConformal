@@ -7,12 +7,18 @@ initialize_saocp <- function(object) {
     conditional = FALSE
   )
 
+  acceptable_parameters <- list(
+    interval_constructor = c("conformal", "linear"),
+    conformity_score = c("absolute_error"),
+    conditional = c(FALSE, TRUE)
+  )
+
   if(is.null(object$internal)) {
-    for(n in names(default_parameters)) {
-      if(is.null(object$parameters[[n]])) {
-        object$parameters[[n]] <- default_parameters[[n]]
-      }
-    }
+    object$parameters <- initialize_parameters(
+      object$parameters,
+      default_parameters,
+      acceptable_parameters
+    )
 
     object$internal$K <- ncol(object$X)
 
@@ -65,7 +71,6 @@ update_saocp <- function(object, Y, predictions, X = NULL, training = FALSE) {
   score <- conformity_score_absolute_error
 
   n <- length(Y)
-  prediction_matrix <- is.matrix(predictions)
 
   if(training == TRUE) {
     object$Y <- c(object$Y, Y)
@@ -112,12 +117,7 @@ update_saocp <- function(object, Y, predictions, X = NULL, training = FALSE) {
       object$internal$theta <- rbind(object$internal$theta, theta_star)
 
       # Generate a prediction interval
-      if(prediction_matrix) {
-        interval <- predict_saocp(object, predictions[index, ], X[index, ])
-      }
-      else {
-        interval <- predict_saocp(object, predictions[index], X[index, ])
-      }
+      interval <- predict_saocp(object, predictions[index, ], X[index, ])
       object$intervals <- base::rbind(object$intervals, interval)
 
       # Check if observation was inside or outside of the prediction interval
@@ -130,20 +130,19 @@ update_saocp <- function(object, Y, predictions, X = NULL, training = FALSE) {
         radius <- 0
       }
       else {
-        #radius <- mean(score(predictions[index], Y[index]) >= conformity_scores)
-        radius <- abs(Y[index] - predictions[index])
+        if(object$parameters$interval_constructor == "conformal") {
+          radius <- mean(score(predictions[index], Y[index]) >= conformity_scores)
+        }
+        else {
+          radius <- abs(Y[index] - predictions[index])
+        }
       }
 
       # Save predictions
-      if(prediction_matrix) {
-        object$predictions  <- base::rbind(object$predictions, predictions[index,])
-      }
-      else {
-        object$predictions  <- base::rbind(object$predictions, predictions[index])
-      }
+      object$predictions  <- base::rbind(object$predictions, predictions[index,])
 
       # Updates
-      if(object$parameters$interval_constructor == "linear") {
+      if(object$parameters$interval_constructor %in% c("linear", "conformal")) {
         if(object$parameters$conditional == TRUE) {
           theta_star <- X[index, ] %*% theta_star
         }
@@ -151,7 +150,7 @@ update_saocp <- function(object, Y, predictions, X = NULL, training = FALSE) {
       }
       else if(object$parameters$interval_constructor == "asymmetric") {
         theta_star_loss <- theta_star[2] - theta_star[1] +
-          2/(1 - object$alpha) * (interval[1] - Y[index]) * below +
+          2 / (1 - object$alpha) * (interval[1] - Y[index]) * below +
           2 / (1 - object$alpha) * (Y[index] - interval[2]) * above
       }
 
@@ -159,7 +158,7 @@ update_saocp <- function(object, Y, predictions, X = NULL, training = FALSE) {
       object$internal$experts <- lapply(object$internal$experts, function(expert) {
         expert_theta <- expert$internal$theta[nrow(expert$internal$theta),]
 
-        if(object$parameters$interval_constructor == "linear") {
+        if(object$parameters$interval_constructor %in% c("linear", "conformal")) {
           if(object$parameters$conditional == TRUE) {
             expert_theta <- X[index, ] %*% expert_theta
           }
@@ -183,17 +182,12 @@ update_saocp <- function(object, Y, predictions, X = NULL, training = FALSE) {
         expert$internal$weight <- 1 / (t - expert$internal$start_time + 1) * expert$internal$sum_g * (1 + expert$internal$sum_weights_g)
 
         # Update expert
-        if(prediction_matrix) {
-          expert <- update.aci(expert, Y[index], predictions[index, ], newX = X[index, ])
-        }
-        else {
-          expert <- update.aci(expert, Y[index], predictions[index], newX = X[index, ])
-        }
+        expert <- update.aci(expert, Y[index], predictions[index, ], newX = X[index, ])
 
         expert
       })
 
-      object$Y       <- c(object$Y, Y[index])
+      object$Y <- c(object$Y, Y[index])
       if(!is.null(X)) {
         object$X       <- rbind(object$X, X[index, ])
       }

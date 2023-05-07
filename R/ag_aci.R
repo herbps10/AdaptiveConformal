@@ -8,18 +8,25 @@ initialize_ag_aci <- function(object) {
     conditional = FALSE
   )
 
+  acceptable_parameters <- list(
+    interval_constructor = c("conformal", "linear"),
+    conformity_score = c("absolute_error"),
+    conditional = c(FALSE)
+  )
+
   if(is.null(object$internal)) {
-    for(n in names(default_parameters)) {
-      if(is.null(object$parameters[[n]])) {
-        object$parameters[[n]] <- default_parameters[[n]]
-      }
-    }
+    object$parameters <- initialize_parameters(
+      object$parameters,
+      default_parameters,
+      acceptable_parameters
+    )
 
     theta0 <- ifelse(object$parameters$interval_constructor == "conformal", object$alpha, 0)
 
     # Initialize set of candidate learners
     candidate_acis <- lapply(object$parameters$gamma_grid, function(gamma) {
       aci(
+        X = object$X,
         alpha = object$alpha,
         method = "RollingRC",
         parameters = list(
@@ -51,25 +58,19 @@ initialize_ag_aci <- function(object) {
 #' @importFrom stats predict
 update_ag_aci <- function(object, Y, predictions, X = NULL, training = FALSE) {
   n <- length(Y)
-  prediction_matrix <- is.matrix(predictions)
 
   if(training == TRUE) {
-    object$Y <- c(object$Y, Y)
-    if(is.matrix(predictions)) {
-      object$predictions <- rbind(object$predictions, predictions)
-    }
-    else {
-      object$predictions <- rbind(object$predictions, t(t(predictions)))
-    }
-    object$covered  <- c(object$covered, rep(NA, length(Y)))
-    object$intervals <- rbind(object$intervals, matrix(rep(NA, 2 * length(Y)), ncol = 2, nrow = length(Y)))
+    object$Y           <- c(object$Y, Y)
+    object$predictions <- rbind(object$predictions, predictions)
+    object$covered     <- c(object$covered, rep(NA, length(Y)))
+    object$intervals   <- rbind(object$intervals, matrix(rep(NA, 2 * length(Y)), ncol = 2, nrow = length(Y)))
 
     # Update each of the candidate ACIs
-    object$internal$candidate_acis <- lapply(object$internal$candidate_acis, update.aci, newY = Y, newpredictions = predictions, training = training)
+    object$internal$candidate_acis <- lapply(object$internal$candidate_acis, update.aci, newY = Y, newpredictions = predictions, newX = X, training = training)
   }
   else {
     # Update each of the candidate ACIs
-    object$internal$candidate_acis <- lapply(object$internal$candidate_acis, update.aci, newY = Y, newpredictions = predictions, training = training)
+    object$internal$candidate_acis <- lapply(object$internal$candidate_acis, update.aci, newY = Y, newpredictions = predictions, newX = X, training = training)
 
     lower_candidates <- matrix(unlist(lapply(object$internal$candidate_acis, function(aci) tail(aci$intervals[, 1], n))), nrow = n, byrow = FALSE)
     upper_candidates <- matrix(unlist(lapply(object$internal$candidate_acis, function(aci) tail(aci$intervals[, 2], n))), nrow = n, byrow = FALSE)
@@ -88,14 +89,10 @@ update_ag_aci <- function(object, Y, predictions, X = NULL, training = FALSE) {
     object$intervals   <- rbind(object$intervals, intervals)
     object$covered     <- c(object$covered, covered)
     object$Y           <- c(object$Y, Y)
+    object$predictions <- base::rbind(object$predictions, predictions)
+
     if(!is.null(X)) {
       object$X <- rbind(object$X, X)
-    }
-    if(is.matrix(predictions)) {
-      object$predictions <- base::rbind(object$predictions, predictions)
-    }
-    else {
-      object$predictions <- base::rbind(object$predictions, matrix(predictions, ncol = 1))
     }
   }
 

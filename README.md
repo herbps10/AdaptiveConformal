@@ -11,6 +11,8 @@ Adaptive Conformal Inference (ACI) is a family of algorithms for constructing pr
 The basic idea behind ACI is to adaptively generate prediction intervals that grow or shrink in response to the stream of incoming data.
 
 The following algorithms are included:
-- `RollingRC`: Rolling Risk Control ([Feldman et al. 2023](https://arxiv.org/abs/2205.09095)). Note that the Adaptive Conformal Inference ([Gibbs and Candès 2021](https://arxiv.org/abs/2106.00170)) algorithm can be recovered as a special case of RollingRC.
+- `ACI` / `RollingRC`: Adaptive Conformal Inference ([Gibbs and Candès 2021](https://arxiv.org/abs/2106.00170)), further generalized in the Rolling Risk Control algorithm ([Feldman et al. 2023](https://arxiv.org/abs/2205.09095)).
 - `AgACI`: Aggregated Adaptive Conformal Inference ([Zaffran et al. 2022](https://proceedings.mlr.press/v162/zaffran22a.html)).
 - `FACI`: Fully Adaptive Conformal Inference ([Gibbs and Candès 2022](https://arxiv.org/abs/2208.08401)).
+- `SF-OGD`: Scale-Free Online Gradient Descent.
+- `SAOCP`: Strongly Adaptive Online Conformal Prediction.

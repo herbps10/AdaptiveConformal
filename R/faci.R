@@ -9,12 +9,18 @@ initialize_faci <- function(object) {
     conditional = FALSE
   )
 
+  acceptable_parameters <- list(
+    interval_constructor = c("conformal", "linear"),
+    conformity_score = c("absolute_error"),
+    conditional = c(FALSE)
+  )
+
   if(is.null(object$internal)) {
-    for(n in names(default_parameters)) {
-      if(is.null(object$parameters[[n]])) {
-        object$parameters[[n]] <- default_parameters[[n]]
-      }
-    }
+    object$parameters <- initialize_parameters(
+      object$parameters,
+      default_parameters,
+      acceptable_parameters
+    )
 
     interval_constructor <- interval_constructor_conformity("absolute_error")
 
@@ -73,15 +79,10 @@ update_faci <- function(object, Y, predictions, X = NULL, training = FALSE) {
   n <- length(Y)
 
   if(training == TRUE) {
-    object$Y <- c(object$Y, Y)
-    if(is.matrix(predictions)) {
-      object$predictions <- rbind(object$predictions, predictions)
-    }
-    else {
-      object$predictions <- rbind(object$predictions, t(t(predictions)))
-    }
-    object$covered   <- c(object$covered, rep(NA, length(Y)))
-    object$intervals <- rbind(object$intervals, matrix(rep(NA, 2 * length(Y)), ncol = 2, nrow = length(Y)))
+    object$Y           <- c(object$Y, Y)
+    object$predictions <- rbind(object$predictions, predictions)
+    object$covered     <- c(object$covered, rep(NA, length(Y)))
+    object$intervals   <- rbind(object$intervals, matrix(rep(NA, 2 * length(Y)), ncol = 2, nrow = length(Y)))
   }
   else {
     for(index in 1:n) {

@@ -6,12 +6,18 @@ initialize_rolling_rc <- function(object) {
     conditional = FALSE
   )
 
+  acceptable_parameters <- list(
+    interval_constructor = c("conformal", "linear"),
+    conformity_score = c("absolute_error"),
+    conditional = c(FALSE)
+  )
+
   if(is.null(object$internal)) {
-    for(n in names(default_parameters)) {
-      if(is.null(object$parameters[[n]])) {
-        object$parameters[[n]] <- default_parameters[[n]]
-      }
-    }
+    object$parameters <- initialize_parameters(
+      object$parameters,
+      default_parameters,
+      acceptable_parameters
+    )
 
     if(tolower(object$parameters$interval_constructor) == "conformal") {
       interval_constructor <- interval_constructor_conformity(object$parameters$conformity_score)
@@ -53,7 +59,7 @@ update_rolling_rc <- function(object, Y, predictions, X = NULL, training = FALSE
       # Update theta
       theta_star <- object$internal$theta[nrow(object$internal$theta), ] + object$parameters$gamma * (1 - covered - (1 - object$alpha))
 
-      object$internal$theta <- rbind(object$internal$theta, theta_star)
+      object$internal$theta <- base::rbind(object$internal$theta, theta_star)
       object$intervals      <- base::rbind(object$intervals, interval)
       object$Y              <- c(object$Y, Y[index])
 
@@ -63,6 +69,8 @@ update_rolling_rc <- function(object, Y, predictions, X = NULL, training = FALSE
       object$predictions  <- base::rbind(object$predictions, predictions[index,])
     }
   }
+
+  object$internal$theta <- unname(object$internal$theta)
 
   return(object)
 }

@@ -70,11 +70,19 @@ update.aci <- function(object, newY, newpredictions, newX = NULL, training = FAL
     newX <- matrix(newX, ncol = length(newX))
   }
 
+  if(!is.null(newX)) {
+    if(nrow(newX) != n) {
+      stop("Length of newY and number of rows in newX must be the same.")
+    }
+  }
+
   if(is.vector(newpredictions)) {
     newpredictions <- matrix(newpredictions, ncol = 1)
   }
 
   object <- updaters[[method]](object, Y = newY, predictions = newpredictions, X = newX, training = training)
+
+  object$intervals <- unname(object$intervals)
 
   object$training <- c(object$training, rep(training, length(newY)))
 
@@ -92,8 +100,8 @@ compute_metrics <- function(object) {
   object$below <- mean(object$Y[observed] < object$intervals[observed, 1])
   object$above <- mean(object$Y[observed] > object$intervals[observed, 2])
 
-  if(!is.null(object$X)) {
-    object$conditional_coverage <- (object$covered %*% object$X) / colSums(object$X)
+  if(!is.null(object$X) && nrow(object$X) > 0) {
+    object$conditional_coverage <- (object$covered[observed] %*% object$X[observed, ]) / colSums(object$X[observed,,drop = FALSE])
   }
 
   return(object)

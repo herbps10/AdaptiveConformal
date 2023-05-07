@@ -7,7 +7,7 @@ initialize_sfogd <- function(object) {
   )
 
   acceptable_parameters <- list(
-    interval_constructor = c("conformal", "linear"),
+    interval_constructor = c("conformal", "linear", "asymmetric"),
     conformity_score = c("absolute_error"),
     conditional = c(FALSE, TRUE)
   )

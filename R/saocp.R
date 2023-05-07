@@ -23,7 +23,7 @@ initialize_saocp <- function(object) {
     object$internal$K <- ncol(object$X)
 
     if(tolower(object$parameters$interval_constructor) == "asymmetric") {
-      ntheta <- 2
+      ntheta <- ifelse(object$parameters$conditional, 2 * object$internal$K, 2)
     }
     else {
       ntheta <- ifelse(object$parameters$conditional, object$internal$K, 1)
@@ -139,7 +139,7 @@ update_saocp <- function(object, Y, predictions, X = NULL, training = FALSE) {
       }
 
       # Save predictions
-      object$predictions  <- base::rbind(object$predictions, predictions[index,])
+      object$predictions <- base::rbind(object$predictions, predictions[index,])
 
       # Updates
       if(object$parameters$interval_constructor %in% c("linear", "conformal")) {
@@ -150,10 +150,13 @@ update_saocp <- function(object, Y, predictions, X = NULL, training = FALSE) {
       }
       else if(object$parameters$interval_constructor == "asymmetric") {
         if(object$parameters$conditional == TRUE) {
-          theta_star <- X[index, ] %*% theta_star
+          theta_star <- c(
+            X[index, ] %*% theta_star[1:ncol(X)],
+            X[index, ] %*% theta_star[(ncol(X) + 1):length(theta_star)]
+          )
         }
 
-        theta_star_loss <- theta_star[2] - theta_star[1] +
+        theta_star_loss <- theta_star[2] + theta_star[1] +
           2 / (1 - object$alpha) * (interval[1] - Y[index]) * below +
           2 / (1 - object$alpha) * (Y[index] - interval[2]) * above
       }
@@ -169,17 +172,29 @@ update_saocp <- function(object, Y, predictions, X = NULL, training = FALSE) {
           expert_loss <- max(object$alpha * (radius - expert_theta), (1 - object$alpha) * (expert_theta - radius))
         }
         else if(object$parameters$interval_constructor == "asymmetric") {
+          if(object$parameters$conditional == TRUE) {
+            expert_theta <- c(
+              X[index, ] %*% expert_theta[1:ncol(X)],
+              X[index, ] %*% expert_theta[(ncol(X) + 1):length(expert_theta)]
+            )
+          }
+
           expert_below <- Y[index] < predictions[index] - expert_theta[1]
           expert_above <- Y[index] > predictions[index] + expert_theta[2]
-          expert_loss <- expert_theta[2] - expert_theta[1] +
+          expert_loss <- expert_theta[2] + expert_theta[1] +
             2 / (1 - object$alpha) * ((predictions[index] - expert_theta[1]) - Y[index]) * expert_below +
             2 / (1 - object$alpha) * (Y[index] - (predictions[index] + expert_theta[2])) * expert_above
         }
 
+        #g <- 1 / object$parameters$D * ifelse(expert$internal$weight > 0,
+        #                                      min(max(-1, theta_star_loss - expert_loss), 1),
+        #                                      min(max(0, theta_star_loss - expert_loss), 1))
+        #g <- g / max(object$alpha, 1 - object$alpha)
         g <- 1 / object$parameters$D * ifelse(expert$internal$weight > 0,
-                                              min(max(-1, theta_star_loss - expert_loss), 1),
-                                              min(max(0, theta_star_loss - expert_loss), 1))
-        g <- g / max(object$alpha, 1 - object$alpha)
+                                              theta_star_loss - expert_loss,
+                                              max(0, theta_star_loss - expert_loss))
+        #g <- g / max(object$alpha, 1 - object$alpha)
+
 
         expert$internal$sum_g <- expert$internal$sum_g + g
         expert$internal$sum_weights_g <- expert$internal$sum_weights_g + expert$internal$weight * g
@@ -232,9 +247,18 @@ saocp_theta <- function(object) {
 
 # Generate a prediction interval
 predict_saocp <- function(object, prediction, X = NULL) {
+  if(is.vector(X)) X <- matrix(X, ncol = length(X))
   theta <- saocp_theta(object)
   if(object$parameters$conditional && !is.null(X)) {
-    theta <- theta %*% X
+    if(object$parameters$interval_constructor == "asymmetric") {
+      theta <- c(
+        X %*% theta[1:ncol(X)],
+        X %*% theta[(ncol(X) + 1):length(theta)]
+      )
+    }
+    else {
+      theta <- X %*% t(theta)
+    }
   }
   object$internal$interval_constructor(prediction, theta, object)
 }

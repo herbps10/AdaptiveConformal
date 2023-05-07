@@ -11,7 +11,7 @@ initialize_ag_aci <- function(object) {
   acceptable_parameters <- list(
     interval_constructor = c("conformal", "linear", "asymmetric"),
     conformity_score = c("absolute_error"),
-    conditional = c(FALSE)
+    conditional = c(FALSE, TRUE)
   )
 
   if(is.null(object$internal)) {
@@ -22,10 +22,10 @@ initialize_ag_aci <- function(object) {
     )
 
     if(tolower(object$parameters$interval_constructor) == "asymmetric") {
-      ntheta <- 2
+      ntheta <- ifelse(object$parameters$conditional, ncol(object$X) * 2, 2)
     }
     else {
-      ntheta <- 1
+      ntheta <- ifelse(object$parameters$conditional, ncol(object$X), 1)
     }
 
     theta0 <- rep(ifelse(object$parameters$interval_constructor == "conformal", object$alpha, 0), ntheta)
@@ -40,7 +40,8 @@ initialize_ag_aci <- function(object) {
           gamma = gamma,
           theta0 = theta0,
           interval_constructor = object$parameters$interval_constructor,
-          conformity_score = object$parameters$conformity_score
+          conformity_score = object$parameters$conformity_score,
+          conditional = object$parameters$conditional
         )
       )
     })

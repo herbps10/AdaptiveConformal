@@ -9,7 +9,7 @@ initialize_rolling_rc <- function(object) {
   acceptable_parameters <- list(
     interval_constructor = c("conformal", "linear", "asymmetric"),
     conformity_score = c("absolute_error"),
-    conditional = c(FALSE)
+    conditional = c(FALSE, TRUE)
   )
 
   if(is.null(object$internal)) {
@@ -20,10 +20,10 @@ initialize_rolling_rc <- function(object) {
     )
 
     if(tolower(object$parameters$interval_constructor) == "asymmetric") {
-      ntheta <- 2
+      ntheta <- ifelse(object$parameters$conditional, ncol(object$X) * 2, 2)
     }
     else {
-      ntheta <- 1
+      ntheta <- ifelse(object$parameters$conditional, ncol(object$X), 1)
     }
 
     if(tolower(object$parameters$interval_constructor) == "conformal") {
@@ -62,7 +62,7 @@ update_rolling_rc <- function(object, Y, predictions, X = NULL, training = FALSE
   else {
     for(index in 1:n) {
       # Generate a prediction interval
-      interval <- predict_rolling_rc(object, predictions[index, ])
+      interval <- predict_rolling_rc(object, predictions[index, ], X[index, ])
 
       # Check if observation was inside or outside of the prediction interval
       below <- Y[index] < interval[1]
@@ -71,13 +71,25 @@ update_rolling_rc <- function(object, Y, predictions, X = NULL, training = FALSE
 
       # Update theta
       if(object$parameters$interval_constructor == "asymmetric") {
-        theta_star <- object$internal$theta[nrow(object$internal$theta), ] + object$parameters$gamma * c(
-          below - (1 - object$alpha) / 2,
-          above - (1 - object$alpha) / 2
-        )
+        if(object$parameters$conditional) {
+          theta_star <- numeric(ncol(object$internal$theta))
+          theta_star[1:ncol(X)] <- object$internal$theta[nrow(object$internal$theta), 1:ncol(X)] + X[index, ] * object$parameters$gamma * (below - (1 - object$alpha) / 2)
+          theta_star[(ncol(X) + 1):ncol(object$internal$theta)] <- object$internal$theta[nrow(object$internal$theta), (ncol(X) + 1):ncol(object$internal$theta)] + X[index, ] * object$parameters$gamma * (above - (1 - object$alpha) / 2)
+        }
+        else {
+          theta_star <- object$internal$theta[nrow(object$internal$theta), ] + object$parameters$gamma * c(
+            (below - (1 - object$alpha) / 2),
+            (above - (1 - object$alpha) / 2)
+          )
+        }
       }
       else {
-        theta_star <- object$internal$theta[nrow(object$internal$theta), ] + object$parameters$gamma * (1 - covered - (1 - object$alpha))
+        if(object$parameters$conditional) {
+          theta_star <- object$internal$theta[nrow(object$internal$theta), ] + X[index, ] * object$parameters$gamma * (1 - covered - (1 - object$alpha))
+        }
+        else {
+          theta_star <- object$internal$theta[nrow(object$internal$theta), ] + object$parameters$gamma * (1 - covered - (1 - object$alpha))
+        }
       }
 
       object$internal$theta <- base::rbind(object$internal$theta, theta_star)
@@ -98,5 +110,18 @@ update_rolling_rc <- function(object, Y, predictions, X = NULL, training = FALSE
 
 # Generate a prediction interval
 predict_rolling_rc <- function(object, prediction, X = NULL) {
-  object$internal$interval_constructor(prediction, object$internal$theta[nrow(object$internal$theta), ], object)
+  if(is.vector(X)) {
+    X <- matrix(X, ncol = length(X))
+  }
+
+  theta <- object$internal$theta[nrow(object$internal$theta), ]
+  if(object$parameters$conditional == TRUE) {
+    if(object$parameters$interval_constructor == "asymmetric") {
+      theta <- c(X %*% theta[1:ncol(X)], X %*% theta[(ncol(X) + 1):length(theta)])
+    }
+    else {
+      theta <- X %*% theta
+    }
+  }
+  object$internal$interval_constructor(prediction, theta, object)
 }

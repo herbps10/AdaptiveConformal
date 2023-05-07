@@ -8,7 +8,7 @@ initialize_saocp <- function(object) {
   )
 
   acceptable_parameters <- list(
-    interval_constructor = c("conformal", "linear"),
+    interval_constructor = c("conformal", "linear", "asymmetric"),
     conformity_score = c("absolute_error"),
     conditional = c(FALSE, TRUE)
   )
@@ -149,6 +149,10 @@ update_saocp <- function(object, Y, predictions, X = NULL, training = FALSE) {
         theta_star_loss <- max(object$alpha * (radius - theta_star), (1 - object$alpha) * (theta_star - radius))
       }
       else if(object$parameters$interval_constructor == "asymmetric") {
+        if(object$parameters$conditional == TRUE) {
+          theta_star <- X[index, ] %*% theta_star
+        }
+
         theta_star_loss <- theta_star[2] - theta_star[1] +
           2 / (1 - object$alpha) * (interval[1] - Y[index]) * below +
           2 / (1 - object$alpha) * (Y[index] - interval[2]) * above
@@ -164,10 +168,12 @@ update_saocp <- function(object, Y, predictions, X = NULL, training = FALSE) {
           }
           expert_loss <- max(object$alpha * (radius - expert_theta), (1 - object$alpha) * (expert_theta - radius))
         }
-        else {
+        else if(object$parameters$interval_constructor == "asymmetric") {
+          expert_below <- Y[index] < predictions[index] - expert_theta[1]
+          expert_above <- Y[index] > predictions[index] + expert_theta[2]
           expert_loss <- expert_theta[2] - expert_theta[1] +
-            2/(1 - object$alpha) * (predictions[index] - expert_theta[1] - Y[index]) * below +
-            2 / (1 - object$alpha) * (Y[index] - predictions[index] - expert_theta[2]) * above
+            2 / (1 - object$alpha) * ((predictions[index] - expert_theta[1]) - Y[index]) * expert_below +
+            2 / (1 - object$alpha) * (Y[index] - (predictions[index] + expert_theta[2])) * expert_above
         }
 
         g <- 1 / object$parameters$D * ifelse(expert$internal$weight > 0,

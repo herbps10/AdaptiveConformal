@@ -70,14 +70,14 @@ update_rolling_rc <- function(object, Y, predictions, X = NULL, training = FALSE
       covered <- Y[index] >= interval[1] && Y[index] <= interval[2]
 
       # Update theta
-      if(object$parameters$interval_constructor == "linear") {
-        theta_star <- object$internal$theta[nrow(object$internal$theta), ] + object$parameters$gamma * (1 - covered - (1 - object$alpha))
-      }
-      else {
+      if(object$parameters$interval_constructor == "asymmetric") {
         theta_star <- object$internal$theta[nrow(object$internal$theta), ] + object$parameters$gamma * c(
           below - (1 - object$alpha) / 2,
           above - (1 - object$alpha) / 2
         )
+      }
+      else {
+        theta_star <- object$internal$theta[nrow(object$internal$theta), ] + object$parameters$gamma * (1 - covered - (1 - object$alpha))
       }
 
       object$internal$theta <- base::rbind(object$internal$theta, theta_star)

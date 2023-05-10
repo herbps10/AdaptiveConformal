@@ -5,12 +5,14 @@ initialize_ag_aci <- function(object) {
     interval_constructor = "conformal",
     conformity_score = "absolute_error",
     gamma_grid = c(0.001, 0.002, 0.004, 0.008, 0.016, 0.032, 0.064, 0.128),
+    symmetric = TRUE,
     conditional = FALSE
   )
 
   acceptable_parameters <- list(
-    interval_constructor = c("conformal", "linear", "asymmetric"),
+    interval_constructor = c("conformal", "linear"),
     conformity_score = c("absolute_error"),
+    asymmetric = c(FALSE, TRUE),
     conditional = c(FALSE, TRUE)
   )
 
@@ -21,14 +23,27 @@ initialize_ag_aci <- function(object) {
       acceptable_parameters
     )
 
-    if(tolower(object$parameters$interval_constructor) == "asymmetric") {
-      ntheta <- ifelse(object$parameters$conditional, ncol(object$X) * 2, 2)
-    }
-    else {
+    if(object$parameters$symmetric == TRUE) {
       ntheta <- ifelse(object$parameters$conditional, ncol(object$X), 1)
     }
+    else {
+      ntheta <- ifelse(object$parameters$conditional, ncol(object$X) * 2, 2)
+    }
 
-    theta0 <- rep(ifelse(object$parameters$interval_constructor == "conformal", object$alpha, 0), ntheta)
+    if(!is.null(object$parameters$theta0)) {
+      theta0 <- rep(object$parameters$theta0, ntheta)
+    }
+
+    if(tolower(object$parameters$interval_constructor) == "conformal") {
+      interval_constructor <- interval_constructor_conformity(object$parameters$conformity_score, object$parameters$symmetric)
+      if(is.null(object$parameters$theta0))
+        theta0 <- rep(object$alpha, ntheta)
+    }
+    else if(tolower(object$parameters$interval_constructor) == "linear") {
+      interval_constructor <- interval_constructor_linear(object$parameters$symmetric)
+      if(is.null(object$parameters$theta0))
+        theta0 <- rep(0, ntheta)
+    }
 
     # Initialize set of candidate learners
     candidate_acis <- lapply(object$parameters$gamma_grid, function(gamma) {

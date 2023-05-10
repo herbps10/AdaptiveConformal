@@ -4,7 +4,7 @@
 \alias{plot.aci}
 \title{Plot an ACI object.}
 \usage{
-\method{plot}{aci}(x, index = NULL, legend = TRUE, ...)
+\method{plot}{aci}(x, index = NULL, legend = TRUE, predictions = TRUE, ...)
 }
 \arguments{
 \item{x}{object of class "aci"}

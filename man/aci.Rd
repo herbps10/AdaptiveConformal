@@ -7,6 +7,7 @@
 aci(
   Y = NULL,
   predictions = NULL,
+  X = NULL,
   training = FALSE,
   alpha = 0.95,
   method = "AgACI",
@@ -18,6 +19,8 @@ aci(
 
 \item{predictions}{optional vector or matrix of predictions.}
 
+\item{X}{optional matrix of covariates}
+
 \item{training}{optional boolean indicating if the supplied Y and prediction values should be treated as training data (not used to update ACI parameters, but used in e.g. calculating conformity scores).}
 
 \item{alpha}{desired empirical coverage. That is, the method will target alpha * 100\% prediction intervals.}
@@ -25,12 +28,13 @@ aci(
 \item{method}{a string specifying the Adaptive Conformal Inference method to use.
 The available methods are:
 \describe{
-   \item{'RollingRC'}{Rolling Risk Control \insertCite{feldman2023rollingrisk}{AdaptiveConformal}.
-   Requires specification of a positive learning rate gamma.}
+   \item{'RollingRC'}{Rolling Risk Control \insertCite{feldman2023rollingrisk}{AdaptiveConformal}.}
+   \item{'SCP'}{Split Conformal Prediction.}
    \item{'AgACI'}{Aggregated ACI \insertCite{zaffran2022agaci}{AdaptiveConformal}.
-   Multiple ACI algorithms are executed for a grid of learning rates, and the resulting intervals are combined using the Bernstein Online Aggregation method
-   for online aggregation of experts.}
+   Multiple ACI algorithms are executed for a grid of learning rates, and the resulting intervals are combined using Bernstein Online Aggregation.}
    \item{'FACI'}{Fully Adaptive Conformal Inference \insertCite{gibbs2022faci}{AdaptiveConformal}.}
+   \item{'SF-OGD'}{Scale-Free Online Gradient Descent \insertCite{orabona2018scalefree}{AdaptiveConformal}.}
+   \item{'SAOCP'}{Strongly Adaptive Online Conformal Prediction \insertCite{bhatnagar2023improved}{AdaptiveConformal}.}
 }}
 
 \item{parameters}{a list of parameters that depend on the chosen ACI method.
@@ -88,7 +92,7 @@ N <- 1e3
 Y <- rnorm(N)
 predictions <- rep(0, N) # predict 0 at very timestep
 
-# Apply Rolling Risk Control algorithm with learning rate gamma = 0.01
+# Apply ACI/Rolling Risk Control algorithm with learning rate gamma = 0.01
 # with goal of 90\\% prediction intervals
 result <- aci(Y, predictions, method = "RollingRC", alpha = 0.9,
               parameters = list(gamma = 0.01))

@@ -3,12 +3,14 @@ initialize_sfogd <- function(object) {
     gamma = 0.01,
     interval_constructor = "linear",
     conformity_score = "absolute_error",
+    symmetric = TRUE,
     conditional = FALSE
   )
 
   acceptable_parameters <- list(
-    interval_constructor = c("conformal", "linear", "asymmetric"),
+    interval_constructor = c("conformal", "linear"),
     conformity_score = c("absolute_error"),
+    symmetric = c(FALSE, TRUE),
     conditional = c(FALSE, TRUE)
   )
 
@@ -21,7 +23,7 @@ initialize_sfogd <- function(object) {
 
     object$internal$K <- ncol(object$X)
 
-    if(tolower(object$parameters$interval_constructor) == "asymmetric") {
+    if(object$parameters$symmetric == FALSE) {
       ntheta <- ifelse(object$parameters$conditional, 2 * object$internal$K, 2)
     }
     else {
@@ -29,20 +31,14 @@ initialize_sfogd <- function(object) {
     }
 
     if(tolower(object$parameters$interval_constructor) == "conformal") {
-      interval_constructor <- interval_constructor_conformity(object$parameters$conformity_score)
+      interval_constructor <- interval_constructor_conformity(object$parameters$conformity_score, object$parameters$symmetric)
+      interval_constructor <- interval_constructor_conformity_asymmetric(object$parameters$conformity_score)
+
       theta0 <- ifelse(is.null(object$parameters$theta0), object$alpha, object$parameters$theta0)
     }
     else if(tolower(object$parameters$interval_constructor) == "linear") {
-      interval_constructor <- interval_constructor_linear()
-      if(is.null(object$parameters$theta0)) {
-        theta0 <- rep(0, ntheta)
-      }
-      else {
-        theta0 <- rep(object$parameters$theta0, length.out = ntheta)
-      }
-    }
-    else if(tolower(object$parameters$interval_constructor) == "asymmetric") {
-      interval_constructor <- interval_constructor_asymmetric()
+      interval_constructor <- interval_constructor_linear(object$parameters$symmetric)
+
       if(is.null(object$parameters$theta0)) {
         theta0 <- rep(0, ntheta)
       }
@@ -63,7 +59,6 @@ initialize_sfogd <- function(object) {
 
 update_sfogd <- function(object, Y, predictions, X = NULL, training = FALSE) {
   n <- length(Y)
-  prediction_matrix <- is.matrix(predictions)
 
   if(training == TRUE) {
     object$Y <- c(object$Y, Y)
@@ -75,12 +70,7 @@ update_sfogd <- function(object, Y, predictions, X = NULL, training = FALSE) {
   else {
     for(index in 1:n) {
       # Generate a prediction interval
-      if(prediction_matrix) {
-        interval <- predict_sfogd(object, predictions[index, ], X[index,])
-      }
-      else {
-        interval <- predict_sfogd(object, predictions[index], X[index,])
-      }
+      interval <- predict_sfogd(object, predictions[index, ], X[index,])
 
       # Check if observation was inside or outside of the prediction interval
       covered <- Y[index] >= interval[1] && Y[index] <= interval[2]
@@ -143,7 +133,7 @@ predict_sfogd <- function(object, prediction, X = NULL) {
   if(is.vector(X)) X <- matrix(X, ncol = length(X))
   theta <- object$internal$theta[nrow(object$internal$theta),]
   if(object$parameters$conditional) {
-    if(object$parameters$interval_constructor == "asymmetric") {
+    if(object$parameters$symmetric == FALSE) {
       theta <- c(
         X %*% object$internal$theta[nrow(object$internal$theta), 1:ncol(X)],
         X %*% object$internal$theta[nrow(object$internal$theta), (ncol(X) + 1):ncol(object$internal$theta)]

@@ -4,7 +4,7 @@
 \alias{predict.aci}
 \title{Compute a conformal prediction interval}
 \usage{
-\method{predict}{aci}(object, prediction, ...)
+\method{predict}{aci}(object, prediction = 0, X = NULL, ...)
 }
 \arguments{
 \item{object}{object of class "aci"}

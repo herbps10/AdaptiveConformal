@@ -4,7 +4,7 @@
 \alias{update.aci}
 \title{Update an ACI object with a new observation}
 \usage{
-\method{update}{aci}(object, newY, newpredictions, training = FALSE, ...)
+\method{update}{aci}(object, newY, newpredictions, newX = NULL, training = FALSE, ...)
 }
 \arguments{
 \item{object}{object of class "aci"}

@@ -4,12 +4,14 @@ initialize_saocp <- function(object) {
     g = 8,
     interval_constructor = "linear",
     conformity_score = "absolute_error",
+    symmetric = TRUE,
     conditional = FALSE
   )
 
   acceptable_parameters <- list(
-    interval_constructor = c("conformal", "linear", "asymmetric"),
+    interval_constructor = c("conformal", "linear"),
     conformity_score = c("absolute_error"),
+    symmetric = c(FALSE, TRUE),
     conditional = c(FALSE, TRUE)
   )
 
@@ -22,36 +24,36 @@ initialize_saocp <- function(object) {
 
     object$internal$K <- ncol(object$X)
 
-    if(tolower(object$parameters$interval_constructor) == "asymmetric") {
-      ntheta <- ifelse(object$parameters$conditional, 2 * object$internal$K, 2)
+    if(object$parameters$symmetric == TRUE) {
+      ntheta <- ifelse(object$parameters$conditional, object$internal$K, 1)
     }
     else {
-      ntheta <- ifelse(object$parameters$conditional, object$internal$K, 1)
+      ntheta <- ifelse(object$parameters$conditional, 2 * object$internal$K, 2)
+    }
+
+    if(!is.null(object$parameters$theta0)) {
+      theta0 <- rep(object$parameters$theta0, ntheta)
     }
 
     if(tolower(object$parameters$interval_constructor) == "conformal") {
-      interval_constructor <- interval_constructor_conformity(object$parameters$conformity_score)
-      theta0 <- rep(0, ntheta)
+      interval_constructor <- interval_constructor_conformity(object$parameters$conformity_score, object$parameters$symmetric)
+      if(is.null(object$parameters$theta0))
+        theta0 <- rep(object$alpha, ntheta)
     }
     else if(tolower(object$parameters$interval_constructor) == "linear") {
-      interval_constructor <- interval_constructor_linear()
-      theta0 <- rep(0, ntheta)
+      interval_constructor <- interval_constructor_linear(object$parameters$symmetric)
+      if(is.null(object$parameters$theta0))
+        theta0 <- rep(0, ntheta)
     }
-    else if(tolower(object$parameters$interval_constructor) == "asymmetric") {
-      interval_constructor <- interval_constructor_asymmetric()
-      if(is.null(object$parameters$theta0)) {
-        theta0 <- c(0, 0)
-      }
-      else {
-        theta0 <- rep(object$parameters$theta0, length.out = 2)
-      }
-    }
+
+    score <- conformity_score_absolute_error
 
     object$internal <- list(
       experts = list(),
       theta0 = theta0,
       theta = matrix(nrow = 0, ncol = ntheta),
-      interval_constructor = interval_constructor
+      interval_constructor = interval_constructor,
+      score = score
     )
   }
 
@@ -67,8 +69,6 @@ update_saocp <- function(object, Y, predictions, X = NULL, training = FALSE) {
         }
         multiplier * 2^n
   }
-
-  score <- conformity_score_absolute_error
 
   n <- length(Y)
 
@@ -125,7 +125,7 @@ update_saocp <- function(object, Y, predictions, X = NULL, training = FALSE) {
       below <- Y[index] < interval[1]
       above <- Y[index] > interval[2]
 
-      conformity_scores <- score(object$predictions, object$Y)
+      conformity_scores <- object$internal$score(object$predictions, object$Y)
       if(length(conformity_scores) == 0) {
         radius <- 0
       }

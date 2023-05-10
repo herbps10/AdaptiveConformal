@@ -3,12 +3,14 @@ initialize_rolling_rc <- function(object) {
     gamma = 0.01,
     interval_constructor = "conformal",
     conformity_score = "absolute_error",
+    symmetric = TRUE,
     conditional = FALSE
   )
 
   acceptable_parameters <- list(
-    interval_constructor = c("conformal", "linear", "asymmetric"),
+    interval_constructor = c("conformal", "linear"),
     conformity_score = c("absolute_error"),
+    symmetric = c(FALSE, TRUE),
     conditional = c(FALSE, TRUE)
   )
 
@@ -19,24 +21,26 @@ initialize_rolling_rc <- function(object) {
       acceptable_parameters
     )
 
-    if(tolower(object$parameters$interval_constructor) == "asymmetric") {
-      ntheta <- ifelse(object$parameters$conditional, ncol(object$X) * 2, 2)
+    if(object$parameters$symmetric == TRUE) {
+      ntheta <- ifelse(object$parameters$conditional, ncol(object$X), 1)
     }
     else {
-      ntheta <- ifelse(object$parameters$conditional, ncol(object$X), 1)
+      ntheta <- ifelse(object$parameters$conditional, ncol(object$X) * 2, 2)
+    }
+
+    if(!is.null(object$parameters$theta0)) {
+      theta0 <- rep(object$parameters$theta0, ntheta)
     }
 
     if(tolower(object$parameters$interval_constructor) == "conformal") {
-      interval_constructor <- interval_constructor_conformity(object$parameters$conformity_score)
-      theta0 <- rep(ifelse(is.null(object$parameters$theta0), object$alpha, object$parameters$theta0), ntheta)
+      interval_constructor <- interval_constructor_conformity(object$parameters$conformity_score, object$parameters$symmetric)
+      if(is.null(object$parameters$theta0))
+        theta0 <- rep(object$alpha, ntheta)
     }
     else if(tolower(object$parameters$interval_constructor) == "linear") {
-      interval_constructor <- interval_constructor_linear()
-      theta0 <- rep(ifelse(is.null(object$parameters$theta0), 0, object$parameters$theta0), ntheta)
-    }
-    else if(tolower(object$parameters$interval_constructor) == "asymmetric") {
-      interval_constructor <- interval_constructor_asymmetric()
-      theta0 <- rep(ifelse(is.null(object$parameters$theta0), 0, object$parameters$theta0), ntheta)
+      interval_constructor <- interval_constructor_linear(object$parameters$symmetric)
+      if(is.null(object$parameters$theta0))
+        theta0 <- rep(0, ntheta)
     }
 
     object$internal <- list(
@@ -70,7 +74,15 @@ update_rolling_rc <- function(object, Y, predictions, X = NULL, training = FALSE
       covered <- Y[index] >= interval[1] && Y[index] <= interval[2]
 
       # Update theta
-      if(object$parameters$interval_constructor == "asymmetric") {
+      if(object$parameters$symmetric == TRUE) {
+        if(object$parameters$conditional) {
+          theta_star <- object$internal$theta[nrow(object$internal$theta), ] + X[index, ] * object$parameters$gamma * (1 - covered - (1 - object$alpha))
+        }
+        else {
+          theta_star <- object$internal$theta[nrow(object$internal$theta), ] + object$parameters$gamma * (1 - covered - (1 - object$alpha))
+        }
+      }
+      else {
         if(object$parameters$conditional) {
           theta_star <- numeric(ncol(object$internal$theta))
           theta_star[1:ncol(X)] <- object$internal$theta[nrow(object$internal$theta), 1:ncol(X)] + X[index, ] * object$parameters$gamma * (below - (1 - object$alpha) / 2)
@@ -81,14 +93,6 @@ update_rolling_rc <- function(object, Y, predictions, X = NULL, training = FALSE
             (below - (1 - object$alpha) / 2),
             (above - (1 - object$alpha) / 2)
           )
-        }
-      }
-      else {
-        if(object$parameters$conditional) {
-          theta_star <- object$internal$theta[nrow(object$internal$theta), ] + X[index, ] * object$parameters$gamma * (1 - covered - (1 - object$alpha))
-        }
-        else {
-          theta_star <- object$internal$theta[nrow(object$internal$theta), ] + object$parameters$gamma * (1 - covered - (1 - object$alpha))
         }
       }
 

@@ -8,12 +8,13 @@
 #' @param method a string specifying the Adaptive Conformal Inference method to use.
 #'   The available methods are:
 #'   \describe{
-#'      \item{'RollingRC'}{Rolling Risk Control \insertCite{feldman2023rollingrisk}{AdaptiveConformal}.
-#'      Requires specification of a positive learning rate gamma.}
+#'      \item{'RollingRC'}{Rolling Risk Control \insertCite{feldman2023rollingrisk}{AdaptiveConformal}.}
+#'      \item{'SCP'}{Split Conformal Prediction.}
 #'      \item{'AgACI'}{Aggregated ACI \insertCite{zaffran2022agaci}{AdaptiveConformal}.
-#'      Multiple ACI algorithms are executed for a grid of learning rates, and the resulting intervals are combined using the Bernstein Online Aggregation method
-#'      for online aggregation of experts.}
+#'      Multiple ACI algorithms are executed for a grid of learning rates, and the resulting intervals are combined using Bernstein Online Aggregation.}
 #'      \item{'FACI'}{Fully Adaptive Conformal Inference \insertCite{gibbs2022faci}{AdaptiveConformal}.}
+#'      \item{'SF-OGD'}{Scale-Free Online Gradient Descent \insertCite{orabona2018scalefree}{AdaptiveConformal}.}
+#'      \item{'SAOCP'}{Strongly Adaptive Online Conformal Prediction \insertCite{bhatnagar2023improved}{AdaptiveConformal}.}
 #'   }
 #' @param parameters a list of parameters that depend on the chosen ACI method.
 #' \describe{
@@ -66,7 +67,7 @@
 #' Y <- rnorm(N)
 #' predictions <- rep(0, N) # predict 0 at very timestep
 #'
-#' # Apply Rolling Risk Control algorithm with learning rate gamma = 0.01
+#' # Apply ACI/Rolling Risk Control algorithm with learning rate gamma = 0.01
 #' # with goal of 90\% prediction intervals
 #' result <- aci(Y, predictions, method = "RollingRC", alpha = 0.9,
 #'               parameters = list(gamma = 0.01))
@@ -117,6 +118,7 @@ aci <- function(Y = NULL, predictions = NULL, X = NULL, training = FALSE, alpha 
   }
 
   initializers <- list(
+    SCP = initialize_scp,
     RollingRC = initialize_rolling_rc,
     AgACI = initialize_ag_aci,
     FACI = initialize_faci,
@@ -136,7 +138,7 @@ aci <- function(Y = NULL, predictions = NULL, X = NULL, training = FALSE, alpha 
   return(object)
 }
 
-aci_methods <- function() c("AgACI", "RollingRC", "FACI", "GACI", "SF-OGD", "SAOCP")
+aci_methods <- function() c("AgACI", "RollingRC", "FACI", "GACI", "SF-OGD", "SAOCP", "SCP")
 
 #' Compute a conformal prediction interval
 #'
@@ -148,6 +150,7 @@ predict.aci <- function(object, prediction = 0, X = NULL, ...) {
   method <- match.arg(object$method, aci_methods())
 
   funs <- list(
+    SCP = predict_scp,
     RollingRC = predict_rolling_rc,
     AgACI = predict_ag_aci,
     FACI = predict_faci,
@@ -194,6 +197,8 @@ summary.aci <- function(object, ...) {
   }
   else {
     cat(paste0("Empirical coverage: ", format(round(object$coverage * 100, 2)), "% (", within, "/", N_intervals, ")\n"))
+    cat(paste0("Below interval: ", format(round(object$below * 100, 2)), "%\n"))
+    cat(paste0("Above interval: ", format(round(object$above * 100, 2)), "%\n"))
     cat(paste0("Mean interval width: ", format(round(object$mean_width, 3)), "\n"))
     cat(paste0("Mean interval loss: ", format(round(object$mean_interval_loss, 3)), "\n"))
 

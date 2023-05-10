@@ -58,7 +58,8 @@ update.aci <- function(object, newY, newpredictions, newX = NULL, training = FAL
   }
 
   updaters <- list(
-    RollingRC  = update_rolling_rc,
+    SCP = update_scp,
+    RollingRC = update_rolling_rc,
     AgACI = update_ag_aci,
     FACI  = update_faci,
     GACI  = update_gaci,

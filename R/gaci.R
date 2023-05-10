@@ -199,7 +199,7 @@ predict_gaci <- function(object, prediction, design_matrix = NULL) {
   }
 }
 
-#' @importfrom utils tail
+#' @importFrom utils tail
 gaci_oracle <- function(object) {
   oracle <- object
   # retrieve the last theta

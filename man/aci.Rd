@@ -60,6 +60,12 @@ The available methods are:
        \item A function (see details)
      }
    }
+   \item{symmetric}{
+     A boolean indicating whether the intervals should be symmetric (the default) or asymmetric.
+   }
+   \item{conditional}{
+     A boolean indicating whether the intervals should be generated conditional on covariates.
+   }
 }}
 }
 \value{

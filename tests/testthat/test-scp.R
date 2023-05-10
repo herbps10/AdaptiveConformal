@@ -1,0 +1,79 @@
+method <- "SCP"
+test_that("SCP: default initialization", {
+  result <- aci(method = method)
+
+  expect_equal(result$method, method)
+  expect_equal(result$alpha, 0.95)
+  expect_equal(result$parameters$gamma, 0.01)
+  expect_equal(result$parameters$interval_constructor, "conformal")
+  expect_equal(result$parameters$conformity_score, "absolute_error")
+})
+
+test_that("SCP: checks parameters", {
+  expect_no_error(aci(method = method, parameters = list(interval_constructor = "conformal")))
+  expect_error(aci(method = method, parameters = list(interval_constructor = "linear")))
+  expect_error(aci(method = method, parameters = list(interval_constructor = "conformity")))
+
+  expect_no_error(aci(method = method, parameters = list(conformity_score = "absolute_error")))
+  expect_error(aci(method = method, parameters = list(conformity_score = "test")))
+})
+
+test_that("SCP: works with data at initialization", {
+  result <- aci(c(1, 2, 3), c(0, 1, 2), method = method)
+
+  expect_equal(result$Y, c(1, 2, 3))
+  expect_true(is.matrix(result$predictions))
+  expect_equal(result$predictions[, 1], c(0, 1, 2))
+  expect_equal(result$covered, c(0, 1, 1))
+
+  # Check that metrics are calculated
+  expect_equal(result$coverage, 2/3)
+  expect_equal(result$mean_interval_loss, 14 + 2/3)
+  expect_equal(result$mean_width, 1 + 1/3)
+
+  # Prediction
+  expect_equal(unname(predict(result)), c(-1, 1))
+  expect_equal(unname(predict(result, prediction = 1)), c(0, 2))
+})
+
+test_that("SCP: updating with new values", {
+  result <- aci(method = method)
+
+  result <- update(result, newY = 1, newpredictions = 0)
+  result <- update(result, newY = 2, newpredictions = 1)
+  result <- update(result, newY = 3, newpredictions = 2)
+
+  expect_equal(result$Y, c(1, 2, 3))
+  expect_true(is.matrix(result$predictions))
+  expect_equal(result$predictions[, 1], c(0, 1, 2))
+  expect_equal(result$covered, c(0, 1, 1))
+
+  # Check that metrics are calculated
+  expect_equal(result$coverage, 2/3)
+  expect_equal(result$mean_interval_loss, 14 + 2/3)
+  expect_equal(result$mean_width, 1 + 1/3)
+
+  # Prediction
+  expect_equal(unname(predict(result)), c(-1, 1))
+  expect_equal(unname(predict(result, prediction = 1)), c(0, 2))
+})
+
+test_that("SCP: X at initialization", {
+  X <- matrix(c(1, 0, 0, 1, 1, 1, 1, 0, 1), ncol = 3, nrow = 3)
+  result <- aci(c(1, 2, 3), c(0, 1, 2), X = X, method = method)
+
+  expect_equal(result$X, X)
+  expect_equal(result$conditional_coverage, matrix(c(0, 2/3, 0.5), nrow = 1))
+})
+
+test_that("SCP: updates with X", {
+  X <- matrix(c(1, 0, 0, 1, 1, 1, 1, 0, 1), ncol = 3, nrow = 3)
+  result <- aci(X = matrix(ncol = 3, nrow = 0), method = method)
+
+  result <- update(result, newY = 1, newpredictions = 0, newX = X[1, ])
+  result <- update(result, newY = 2, newpredictions = 1, newX = X[2, ])
+  result <- update(result, newY = 3, newpredictions = 2, newX = X[3, ])
+
+  expect_equal(result$X, X)
+  expect_equal(result$conditional_coverage, matrix(c(0, 2/3, 0.5), nrow = 1))
+})

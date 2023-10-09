@@ -62,13 +62,8 @@ update.aci <- function(object, newY, newpredictions, newX = NULL, training = FAL
     ACI = update_aci,
     AgACI = update_ag_aci,
     FACI  = update_faci,
-    GACI  = update_gaci,
     "SF-OGD" = update_sfogd,
-    SAOCP = update_saocp,
-    MACI = update_maci,
-    FreeGrad = update_freegrad,
-    recenter = update_recenter,
-    sparse_coding = update_sparse_coding
+    SAOCP = update_saocp
   )
 
   if(!is.null(newX) && is.vector(newX)) {

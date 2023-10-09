@@ -128,13 +128,8 @@ aci <- function(Y = NULL, predictions = NULL, X = NULL, training = FALSE, alpha 
     ACI = initialize_aci,
     AgACI = initialize_ag_aci,
     FACI = initialize_faci,
-    GACI = initialize_gaci,
     "SF-OGD" = initialize_sfogd,
-    SAOCP = initialize_saocp,
-    MACI = initialize_maci,
-    FreeGrad = initialize_freegrad,
-    recenter = initialize_recenter,
-    sparse_coding = initialize_sparse_coding
+    SAOCP = initialize_saocp
   )
 
   object <- initializers[[method]](object)
@@ -148,7 +143,7 @@ aci <- function(Y = NULL, predictions = NULL, X = NULL, training = FALSE, alpha 
   return(object)
 }
 
-aci_methods <- function() c("AgACI", "ACI", "FACI", "GACI", "SF-OGD", "SAOCP", "SCP", "recenter", "MACI", "FreeGrad", "sparse_coding")
+aci_methods <- function() c("AgACI", "ACI", "FACI", "GACI", "SF-OGD", "SAOCP", "SCP")
 
 #' Compute a conformal prediction interval
 #'
@@ -166,11 +161,7 @@ predict.aci <- function(object, prediction = 0, X = NULL, ...) {
     FACI = predict_faci,
     GACI = predict_gaci,
     "SF-OGD" = predict_sfogd,
-    SAOCP = predict_saocp,
-    MACI = predict_maci,
-    FreeGrad = predict_freegrad,
-    recenter = predict_recenter,
-    sparse_coding = predict_sparse_coding
+    SAOCP = predict_saocp
   )
 
   if(!is.null(X) && is.vector(X)) {

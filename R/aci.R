@@ -8,7 +8,7 @@
 #' @param method a string specifying the Adaptive Conformal Inference method to use.
 #'   The available methods are:
 #'   \describe{
-#'      \item{'RollingRC'}{Rolling Risk Control \insertCite{feldman2023rollingrisk}{AdaptiveConformal}.}
+#'      \item{'ACI'}{Adaptive Conformal Inference \insertCite{gibbs2021aci}{AdaptiveConformal}.}
 #'      \item{'SCP'}{Split Conformal Prediction.}
 #'      \item{'AgACI'}{Aggregated ACI \insertCite{zaffran2022agaci}{AdaptiveConformal}.
 #'      Multiple ACI algorithms are executed for a grid of learning rates, and the resulting intervals are combined using Bernstein Online Aggregation.}
@@ -18,14 +18,14 @@
 #'   }
 #' @param parameters a list of parameters that depend on the chosen ACI method.
 #' \describe{
-#'    \item{gamma}{A positive number specifying the learning rate. For method "RollingRC".}
+#'    \item{gamma}{A positive number specifying the learning rate. For method "ACI".}
 #'    \item{gamma_grid}{A grid of positive learning rates. For method "AgACI" and "FACI.}
 #'    \item{theta0}{Initial value for theta parameter.}
 #'    \item{interval_constructor}{
-#'      Specifies how the prediction intervals are to be formed. Only for "RollingRC" and "AgACI". For "FACI", it is always set to "conformal".
+#'      Specifies how the prediction intervals are to be formed. Only for "ACI" and "AgACI". For "FACI", it is always set to "conformal".
 #'      \itemize{
 #'        \item "conformal": the interval is formed as [prediction - S, prediction + S], where S is the theta*100\% quantile of the previously observed.
-#'        This is the default for "RollingRC" and "AgACI".
+#'        This is the default for "ACI" and "AgACI".
 #'        \item "linear": the interval is formed as [prediction - theta, prediction + theta].
 #'        conformity scores.
 #'        \item A function (see details)
@@ -75,13 +75,13 @@
 #'
 #' # Apply ACI/Rolling Risk Control algorithm with learning rate gamma = 0.01
 #' # with goal of 90\% prediction intervals
-#' result <- aci(Y, predictions, method = "RollingRC", alpha = 0.9,
+#' result <- aci(Y, predictions, method = "ACI", alpha = 0.9,
 #'               parameters = list(gamma = 0.01))
 #' summary(result)
 #'
 #' # Supply a custom conformity score function
 #' conformity_score_squared_error <- function(Y, prediction) (Y - prediction)^2
-#' result <- aci(Y, predictions, method = "RollingRC", alpha = 0.9,
+#' result <- aci(Y, predictions, method = "ACI", alpha = 0.9,
 #'               parameters = list(gamma = 0.01, conformity_score = conformity_score_squared_error))
 #' summary(result)
 #'
@@ -125,12 +125,16 @@ aci <- function(Y = NULL, predictions = NULL, X = NULL, training = FALSE, alpha 
 
   initializers <- list(
     SCP = initialize_scp,
-    RollingRC = initialize_rolling_rc,
+    ACI = initialize_aci,
     AgACI = initialize_ag_aci,
     FACI = initialize_faci,
     GACI = initialize_gaci,
     "SF-OGD" = initialize_sfogd,
-    SAOCP = initialize_saocp
+    SAOCP = initialize_saocp,
+    MACI = initialize_maci,
+    FreeGrad = initialize_freegrad,
+    recenter = initialize_recenter,
+    sparse_coding = initialize_sparse_coding
   )
 
   object <- initializers[[method]](object)
@@ -144,7 +148,7 @@ aci <- function(Y = NULL, predictions = NULL, X = NULL, training = FALSE, alpha 
   return(object)
 }
 
-aci_methods <- function() c("AgACI", "RollingRC", "FACI", "GACI", "SF-OGD", "SAOCP", "SCP")
+aci_methods <- function() c("AgACI", "ACI", "FACI", "GACI", "SF-OGD", "SAOCP", "SCP", "recenter", "MACI", "FreeGrad", "sparse_coding")
 
 #' Compute a conformal prediction interval
 #'
@@ -157,12 +161,16 @@ predict.aci <- function(object, prediction = 0, X = NULL, ...) {
 
   funs <- list(
     SCP = predict_scp,
-    RollingRC = predict_rolling_rc,
+    ACI = predict_aci,
     AgACI = predict_ag_aci,
     FACI = predict_faci,
     GACI = predict_gaci,
     "SF-OGD" = predict_sfogd,
-    SAOCP = predict_saocp
+    SAOCP = predict_saocp,
+    MACI = predict_maci,
+    FreeGrad = predict_freegrad,
+    recenter = predict_recenter,
+    sparse_coding = predict_sparse_coding
   )
 
   if(!is.null(X) && is.vector(X)) {
@@ -202,16 +210,16 @@ summary.aci <- function(object, ...) {
     cat("No intervals have been produced by this method yet.")
   }
   else {
-    cat(paste0("Empirical coverage: ", format(round(object$coverage * 100, 2)), "% (", within, "/", N_intervals, ")\n"))
-    cat(paste0("Below interval: ", format(round(object$below * 100, 2)), "%\n"))
-    cat(paste0("Above interval: ", format(round(object$above * 100, 2)), "%\n"))
-    cat(paste0("Mean interval width: ", format(round(object$mean_width, 3)), "\n"))
-    cat(paste0("Mean interval loss: ", format(round(object$mean_interval_loss, 3)), "\n"))
+    cat(paste0("Empirical coverage: ", format(round(object$metrics$coverage * 100, 2)), "% (", within, "/", N_intervals, ")\n"))
+    cat(paste0("Below interval: ", format(round(object$metrics$below * 100, 2)), "%\n"))
+    cat(paste0("Above interval: ", format(round(object$metrics$above * 100, 2)), "%\n"))
+    cat(paste0("Mean interval width: ", format(round(object$metrics$mean_width, 3)), "\n"))
+    cat(paste0("Mean interval loss: ", format(round(object$metrics$mean_interval_loss, 3)), "\n"))
 
     if(!is.null(object$X) && nrow(object$X) > 0) {
       cat(paste0("Conditional coverage: \n"))
-      for(index in 1:length(object$conditional_coverage)) {
-        cat(paste0(colnames(object$conditional_coverage)[index], ":\t", format(round(object$conditional_coverage[index] * 100, 2)), "%\n"))
+      for(index in 1:length(object$metrics$conditional_coverage)) {
+        cat(paste0(colnames(object$metrics$conditional_coverage)[index], ":\t", format(round(object$metrics$conditional_coverage[index] * 100, 2)), "%\n"))
       }
     }
   }

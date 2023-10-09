@@ -19,9 +19,9 @@ test_that("AgACI: supplying Y at initialization", {
   expect_equal(result$covered, c(0, 1, 1))
 
   # Check that metrics are calculated
-  expect_equal(result$coverage, 2/3)
-  expect_equal(result$mean_interval_loss, 14 + 2/3)
-  expect_equal(result$mean_width, 1 + 1/3)
+  expect_equal(result$metrics$coverage, 2/3)
+  expect_equal(result$metrics$mean_interval_loss, 14 + 2/3)
+  expect_equal(result$metrics$mean_width, 1 + 1/3)
 
   # Prediction
   expect_equal(unname(predict(result)), c(-1, 1))
@@ -46,7 +46,7 @@ test_that("AgACI: X at initialization", {
   result <- aci(c(1, 2, 3), c(0, 1, 2), X = X, method = "AgACI")
 
   expect_equal(result$X, X)
-  expect_equal(result$conditional_coverage, matrix(c(0, 2/3, 0.5), nrow = 1))
+  expect_equal(result$metrics$conditional_coverage, matrix(c(0, 2/3, 0.5), nrow = 1))
 })
 
 test_that("AgACI: updates with X", {
@@ -58,5 +58,21 @@ test_that("AgACI: updates with X", {
   result <- update(result, newY = 3, newpredictions = 2, newX = X[3, ])
 
   expect_equal(result$X, X)
-  expect_equal(result$conditional_coverage, matrix(c(0, 2/3, 0.5), nrow = 1))
+  expect_equal(result$metrics$conditional_coverage, matrix(c(0, 2/3, 0.5), nrow = 1))
+})
+
+
+test_that("AgACI: supplying values all at once is equivalent to supplying values one at a time", {
+  Y <- rnorm(200, 0, 1)
+  predictions <- rnorm(200, 0, 1)
+  result1 <- aci(Y = Y, predictions = predictions, method = "AgACI", alpha = 0.9)
+
+  result2 <- aci(method = "AgACI", alpha = 0.9)
+  for(i in 1:200) {
+    result2 <- update(result2, newY = Y[i], newpredictions = predictions[i])
+  }
+
+  expect_equal(result1$Y, result2$Y)
+  expect_equal(result1$intervals[, 1], result2$intervals[, 1])
+  expect_equal(result1$intervals[, 2], result2$intervals[, 2])
 })

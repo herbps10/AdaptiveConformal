@@ -6,14 +6,16 @@ initialize_ag_aci <- function(object) {
     conformity_score = "absolute_error",
     gamma_grid = c(0.001, 0.002, 0.004, 0.008, 0.016, 0.032, 0.064, 0.128),
     symmetric = TRUE,
-    conditional = FALSE
+    conditional = FALSE,
+    base_method = "ACI"
   )
 
   acceptable_parameters <- list(
-    interval_constructor = c("conformal", "linear"),
+    interval_constructor = c("conformal", "linear", "recenter"),
     conformity_score = c("absolute_error"),
     asymmetric = c(FALSE, TRUE),
-    conditional = c(FALSE, TRUE)
+    conditional = c(FALSE, TRUE),
+    base_method = c("ACI", "recenter")
   )
 
   if(is.null(object$internal)) {
@@ -44,19 +46,26 @@ initialize_ag_aci <- function(object) {
       if(is.null(object$parameters$theta0))
         theta0 <- rep(0, ntheta)
     }
+    else if(tolower(object$parameters$interval_constructor) == "recenter") {
+      interval_constructor <- interval_constructor_recenter()
+      ntheta <- 2
+      if(is.null(object$parameters$theta0))
+        theta0 <- rep(0, ntheta)
+    }
 
     # Initialize set of candidate learners
     candidate_acis <- lapply(object$parameters$gamma_grid, function(gamma) {
       aci(
         X = object$X,
         alpha = object$alpha,
-        method = "RollingRC",
+        method = object$parameters$base_method,
         parameters = list(
           gamma = gamma,
           theta0 = theta0,
           interval_constructor = object$parameters$interval_constructor,
           conformity_score = object$parameters$conformity_score,
-          conditional = object$parameters$conditional
+          conditional = object$parameters$conditional,
+          symmetric = object$parameters$symmetric
         )
       )
     })
@@ -97,6 +106,9 @@ update_ag_aci <- function(object, Y, predictions, X = NULL, training = FALSE) {
 
     lower_candidates <- matrix(unlist(lapply(object$internal$candidate_acis, function(aci) tail(aci$intervals[, 1], n))), nrow = n, byrow = FALSE)
     upper_candidates <- matrix(unlist(lapply(object$internal$candidate_acis, function(aci) tail(aci$intervals[, 2], n))), nrow = n, byrow = FALSE)
+
+    colnames(lower_candidates) <- object$parameters$gamma_grid
+    colnames(upper_candidates) <- object$parameters$gamma_grid
 
     # Update the expert aggregation methods
     object$internal$experts$lower <- predict(object$internal$experts$lower, newexperts = lower_candidates, newY = Y, type = "model")

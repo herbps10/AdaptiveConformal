@@ -1,4 +1,4 @@
-initialize_rolling_rc <- function(object) {
+initialize_aci <- function(object) {
   default_parameters <- list(
     gamma = 0.01,
     interval_constructor = "conformal",
@@ -52,9 +52,8 @@ initialize_rolling_rc <- function(object) {
   return(object)
 }
 
-update_rolling_rc <- function(object, Y, predictions, X = NULL, training = FALSE) {
+update_aci <- function(object, Y, predictions, X = NULL, training = FALSE) {
   n <- length(Y)
-  prediction_matrix <- is.matrix(predictions)
 
   if(training == TRUE) {
     object$Y <- c(object$Y, Y)
@@ -66,7 +65,7 @@ update_rolling_rc <- function(object, Y, predictions, X = NULL, training = FALSE
   else {
     for(index in 1:n) {
       # Generate a prediction interval
-      interval <- predict_rolling_rc(object, predictions[index, ], X[index, ])
+      interval <- predict_aci(object, predictions[index, ], X[index, ])
 
       # Check if observation was inside or outside of the prediction interval
       below <- Y[index] < interval[1]
@@ -113,7 +112,7 @@ update_rolling_rc <- function(object, Y, predictions, X = NULL, training = FALSE
 }
 
 # Generate a prediction interval
-predict_rolling_rc <- function(object, prediction, X = NULL) {
+predict_aci <- function(object, prediction, X = NULL) {
   if(is.vector(X)) {
     X <- matrix(X, ncol = length(X))
   }

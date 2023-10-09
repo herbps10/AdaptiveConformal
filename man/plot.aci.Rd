@@ -4,7 +4,7 @@
 \alias{plot.aci}
 \title{Plot an ACI object.}
 \usage{
-\method{plot}{aci}(x, index = NULL, legend = TRUE, predictions = TRUE, ...)
+\method{plot}{aci}(x, index = NULL, legend = TRUE, predictions = TRUE, engine = "base", ...)
 }
 \arguments{
 \item{x}{object of class "aci"}
@@ -12,6 +12,8 @@
 \item{index}{indexes of the observation and intervals to plot (defaults to showing all observations and intervals).}
 
 \item{legend}{logical indicating whether or not to include a legend}
+
+\item{engine}{either "base" or "ggplot"}
 
 \item{...}{additional arguments to base plot function}
 }

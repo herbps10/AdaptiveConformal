@@ -18,9 +18,9 @@ test_that("SF-OGD: works with data at initialization", {
   expect_equal(result$covered, c(0, 1, 0))
 
   # Check that metrics are calculated
-  expect_equal(result$coverage, 1/3)
-  expect_equal(result$mean_interval_loss, 15.332412)
-  expect_equal(result$mean_width, 1.2982941)
+  expect_equal(result$metrics$coverage, 1/3)
+  expect_equal(result$metrics$mean_interval_loss, 15.332412)
+  expect_equal(result$metrics$mean_width, 1.2982941)
 })
 
 test_that("SF-OGD: updating with new values", {
@@ -36,9 +36,9 @@ test_that("SF-OGD: updating with new values", {
   expect_equal(result$covered, c(0, 1, 0))
 
   # Check that metrics are calculated
-  expect_equal(result$coverage, 1/3)
-  expect_equal(result$mean_interval_loss, 15.332412)
-  expect_equal(result$mean_width, 1.2982941)
+  expect_equal(result$metrics$coverage, 1/3)
+  expect_equal(result$metrics$mean_interval_loss, 15.332412)
+  expect_equal(result$metrics$mean_width, 1.2982941)
 })
 
 test_that("SF-OGD: X at initialization", {
@@ -46,7 +46,7 @@ test_that("SF-OGD: X at initialization", {
   result <- aci(c(1, 2, 3), c(0, 1, 2), X = X, method = "SF-OGD", parameters = list(gamma = 1))
 
   expect_equal(result$X, X)
-  expect_equal(result$conditional_coverage, matrix(c(0, 1/3, 0), nrow = 1))
+  expect_equal(result$metrics$conditional_coverage, matrix(c(0, 1/3, 0), nrow = 1))
 })
 
 test_that("SF-OGD: updates with X", {
@@ -58,5 +58,21 @@ test_that("SF-OGD: updates with X", {
   result <- update(result, newY = 3, newpredictions = 2, newX = X[3, ])
 
   expect_equal(result$X, X)
-  expect_equal(result$conditional_coverage, matrix(c(0, 1/3, 0), nrow = 1))
+  expect_equal(result$metrics$conditional_coverage, matrix(c(0, 1/3, 0), nrow = 1))
+})
+
+
+test_that("SF-OGD: supplying values all at once is equivalent to supplying values one at a time", {
+  Y <- rnorm(200, 0, 1)
+  predictions <- rnorm(200, 0, 1)
+  result1 <- aci(Y = Y, predictions = predictions, method = "SF-OGD", alpha = 0.9)
+
+  result2 <- aci(method = "SF-OGD", alpha = 0.9)
+  for(i in 1:200) {
+    result2 <- update(result2, newY = Y[i], newpredictions = predictions[i])
+  }
+
+  expect_equal(result1$Y, result2$Y)
+  expect_equal(result1$intervals[, 1], result2$intervals[, 1])
+  expect_equal(result1$intervals[, 2], result2$intervals[, 2])
 })

@@ -32,7 +32,6 @@ initialize_sfogd <- function(object) {
 
     if(tolower(object$parameters$interval_constructor) == "conformal") {
       interval_constructor <- interval_constructor_conformity(object$parameters$conformity_score, object$parameters$symmetric)
-      interval_constructor <- interval_constructor_conformity_asymmetric(object$parameters$conformity_score)
 
       theta0 <- ifelse(is.null(object$parameters$theta0), object$alpha, object$parameters$theta0)
     }
@@ -85,7 +84,7 @@ update_sfogd <- function(object, Y, predictions, X = NULL, training = FALSE) {
       object$covered        <- c(object$covered, covered)
       object$predictions  <- base::rbind(object$predictions, predictions[index,])
 
-      if(object$parameters$interval_constructor == "asymmetric") {
+      if(object$parameters$symmetric == FALSE) {
         gradient <- c(
             1 - 2/(1 - object$alpha) * below,
             1 - 2/(1 - object$alpha) * above
@@ -100,7 +99,7 @@ update_sfogd <- function(object, Y, predictions, X = NULL, training = FALSE) {
       object$gradient <- rbind(object$gradient, gradient)
 
       # Update theta
-      if(object$parameters$interval_constructor == "asymmetric") {
+      if(object$parameters$symmetric == FALSE) {
         if(object$parameters$conditional) {
           theta_star <- numeric(ncol(object$internal$theta))
           theta_star[1:ncol(X)] <- object$internal$theta[nrow(object$internal$theta), 1:ncol(X)] -

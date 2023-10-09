@@ -122,3 +122,19 @@ interval_constructor_linear <- function(symmetric) {
     }
   }
 }
+
+#' @importFrom stats quantile
+interval_constructor_recenter <- function() {
+  function(prediction, theta, object) {
+    if(is.matrix(prediction)) {
+      intervals <- matrix(ncol = 2, nrow = length(object$Y))
+      intervals[, 1] <- prediction[, 1] + theta[1] - theta[2]
+      intervals[, 2] <- prediction[, 1] + theta[1] + theta[2]
+      intervals
+    }
+    else {
+      c(prediction + theta[1] - theta[2], prediction + theta[1] + theta[2])
+    }
+  }
+}
+

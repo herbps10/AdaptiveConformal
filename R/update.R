@@ -13,8 +13,8 @@
 #' Y <- rnorm(N)
 #' predictions <- rep(0, N) # predict 0 at very timestep
 #'
-#' # Initialize Rolling Risk Control algorithm
-#' result <- aci(method = "RollingRC", parameters = list(gamma = 0.01))
+#' # Initialize ACI algorithm
+#' result <- aci(method = "ACI", parameters = list(gamma = 0.01))
 #'
 #' # Observe outcomes one at a time and update ACI method
 #' for(t in 1:N) {
@@ -25,7 +25,7 @@
 #'
 #' # Alternatively, multiple observations and predictions can be supplied to
 #' # the update function at the same time
-#' result <- aci(method = "RollingRC", parameters = list(gamma = 0.01))
+#' result <- aci(method = "ACI", parameters = list(gamma = 0.01))
 #'
 #' # Observe outcomes one at a time and update ACI method
 #' result <- update(result, newY = Y, newpredictions = predictions)
@@ -37,7 +37,7 @@
 #' # in the online learning algorithm for ACI.
 #' # For example, suppose that we want to use the first 500 observations as context,
 #' # and only generate intervals for the second 500 observations.
-#' result <- aci(method = "RollingRC", parameters = list(gamma = 0.01))
+#' result <- aci(method = "ACI", parameters = list(gamma = 0.01))
 #'
 #' result <- update(result, newY = Y[1:500], newpredictions = predictions[1:500], training = TRUE)
 #' result <- update(result, newY = Y[501:1000], newpredictions = predictions[501:1000])
@@ -59,12 +59,16 @@ update.aci <- function(object, newY, newpredictions, newX = NULL, training = FAL
 
   updaters <- list(
     SCP = update_scp,
-    RollingRC = update_rolling_rc,
+    ACI = update_aci,
     AgACI = update_ag_aci,
     FACI  = update_faci,
     GACI  = update_gaci,
     "SF-OGD" = update_sfogd,
-    SAOCP = update_saocp
+    SAOCP = update_saocp,
+    MACI = update_maci,
+    FreeGrad = update_freegrad,
+    recenter = update_recenter,
+    sparse_coding = update_sparse_coding
   )
 
   if(!is.null(newX) && is.vector(newX)) {
@@ -88,22 +92,47 @@ update.aci <- function(object, newY, newpredictions, newX = NULL, training = FAL
   object$training <- c(object$training, rep(training, length(newY)))
 
   # Calculate metrics
-  object <- compute_metrics(object)
+  object$metrics <- aci_metrics(object)
 
   object
 }
 
-compute_metrics <- function(object) {
-  observed <- object$training == FALSE
-  object$coverage <- mean(object$covered[observed])
-  object$mean_width <- mean(object$intervals[observed, 2] - object$intervals[observed, 1])
-  object$mean_interval_loss <- mean(interval_loss(object$Y[observed], object$intervals[observed, 1], object$intervals[observed, 2], object$alpha))
-  object$below <- mean(object$Y[observed] < object$intervals[observed, 1])
-  object$above <- mean(object$Y[observed] > object$intervals[observed, 2])
-
-  if(!is.null(object$X) && nrow(object$X) > 0) {
-    object$conditional_coverage <- (object$covered[observed] %*% object$X[observed, ]) / colSums(object$X[observed,,drop = FALSE])
+#' Compute metrics for ACI prediction intervals.
+#'
+#' @param object ACI object
+#' @param indices indices of observations to include in computation of metrics
+#' @export
+aci_metrics <- function(object, indices = NULL) {
+  if(is.null(indices)) {
+    indices <- 1:length(object$Y)
   }
 
-  return(object)
+  observed <- object$training == FALSE
+
+  indices <- (1:length(object$Y) %in% indices) & observed
+
+  coverage <- mean(object$Y[indices] >= object$intervals[indices, 1] & object$Y[indices] <= object$intervals[indices, 2] & object$intervals[indices, 1] <= object$intervals[indices,2])
+  diff <- object$intervals[indices, 2] - object$intervals[indices, 1]
+  mean_width <- mean(ifelse(diff < 0, 0, diff))
+  sd_width   <- sd(ifelse(diff < 0, 0, diff))
+  mean_interval_loss <- mean(interval_loss(object$Y[indices], object$intervals[indices, 1], object$intervals[indices, 2], object$alpha))
+  below <- mean(object$Y[indices] < object$intervals[indices, 1])
+  above <- mean(object$Y[indices] > object$intervals[indices, 2])
+  path_length <- sum(abs(diff(object$intervals[indices, 2] - object$intervals[indices, 1])))
+
+  conditional_coverage <- NA
+  if(!is.null(object$X) && nrow(object$X) == length(indices)) {
+    conditional_coverage <- (object$covered[indices] %*% object$X[indices, ]) / colSums(object$X[indices,,drop = FALSE])
+  }
+
+  return(list(
+    coverage = coverage,
+    mean_width = mean_width,
+    sd_width = sd_width,
+    mean_interval_loss = mean_interval_loss,
+    below = below,
+    above = above,
+    conditional_coverage = conditional_coverage,
+    path_length = path_length
+  ))
 }

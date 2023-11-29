@@ -3,11 +3,12 @@
 #' @param x object of class "aci"
 #' @param index indexes of the observation and intervals to plot (defaults to showing all observations and intervals).
 #' @param legend logical indicating whether or not to include a legend
+#' @param predictions whether or not to include the original predictions in plot
 #' @param engine either "base" or "ggplot"
 #' @param ... additional arguments to base plot function
 #'
 #' @importFrom graphics plot lines legend
-#' @importFrom ggplot2 ggplot aes geom_point geom_line theme
+#' @importFrom ggplot2 ggplot aes geom_point geom_line theme aes_string
 #' @export
 plot.aci <- function(x, index = NULL, legend = TRUE, predictions = TRUE, engine = "base", ...) {
   params <- list(...)
@@ -56,11 +57,11 @@ plot.aci <- function(x, index = NULL, legend = TRUE, predictions = TRUE, engine 
       covered = factor(x$covered[index], labels = c("Outside interval", "Within interval"))
     )
 
-    p <- ggplot(p.data, aes(x = index, y = y)) +
-      geom_point(aes(color = covered), size = 0.5) +
+    p <- ggplot(p.data, aes_string(x = "index", y = "y")) +
+      geom_point(aes_string(color = "covered"), size = 0.5) +
       geom_line(aes(y = predictions, color = "Predictions")) +
-      geom_line(aes(y = lower), alpha = 0.5) +
-      geom_line(aes(y = upper), alpha = 0.5)
+      geom_line(aes_string(y = "lower"), alpha = 0.5) +
+      geom_line(aes_string(y = "upper"), alpha = 0.5)
 
     if(legend == FALSE) {
       p <- p + theme(legend.position = "none")
@@ -77,6 +78,7 @@ plot.aci <- function(x, index = NULL, legend = TRUE, predictions = TRUE, engine 
 #' @param type type of plot: "last" to show only most recent weights, "last" to show all weights
 #' @param legend legend position
 #' @param ... additional arguments to plot
+#' @importFrom graphics axis points
 #' @export
 plot_agaci_weights <- function(x, type = "last", legend = "topright", ...) {
   if(x$method != "AgACI") {

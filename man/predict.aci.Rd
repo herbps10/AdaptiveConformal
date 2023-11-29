@@ -11,6 +11,8 @@
 
 \item{prediction}{vector or matrix of predictions to use for forming the conformal prediction interval}
 
+\item{X}{matrix of covariates}
+
 \item{...}{additional arguments (currently ignored)}
 }
 \description{

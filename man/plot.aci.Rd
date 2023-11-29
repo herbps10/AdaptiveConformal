@@ -13,6 +13,8 @@
 
 \item{legend}{logical indicating whether or not to include a legend}
 
+\item{predictions}{whether or not to include the original predictions in plot}
+
 \item{engine}{either "base" or "ggplot"}
 
 \item{...}{additional arguments to base plot function}

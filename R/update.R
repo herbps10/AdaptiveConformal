@@ -3,6 +3,7 @@
 #' @param object object of class "aci"
 #' @param newY new observation
 #' @param newpredictions new predictions
+#' @param newX new covariates
 #' @param training boolean indicating whether to use new observations and predictions solely as training (TRUE)
 #' or to also update the ACI method (TRUE)
 #' @param ... additional arguments (currently)

@@ -149,6 +149,7 @@ aci_methods <- function() c("AgACI", "ACI", "FACI", "SF-OGD", "SAOCP", "SCP")
 #'
 #' @param object object of class "aci"
 #' @param prediction vector or matrix of predictions to use for forming the conformal prediction interval
+#' @param X matrix of covariates
 #' @param ... additional arguments (currently ignored)
 #' @export
 predict.aci <- function(object, prediction = 0, X = NULL, ...) {

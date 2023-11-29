@@ -13,6 +13,8 @@
 
 \item{newpredictions}{new predictions}
 
+\item{newX}{new covariates}
+
 \item{training}{boolean indicating whether to use new observations and predictions solely as training (TRUE)
 or to also update the ACI method (TRUE)}
 

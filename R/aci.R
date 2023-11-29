@@ -160,7 +160,6 @@ predict.aci <- function(object, prediction = 0, X = NULL, ...) {
     ACI = predict_aci,
     AgACI = predict_ag_aci,
     FACI = predict_faci,
-    GACI = predict_gaci,
     "SF-OGD" = predict_sfogd,
     SAOCP = predict_saocp
   )

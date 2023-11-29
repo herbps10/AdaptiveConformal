@@ -7,6 +7,7 @@
 #' @param ... additional arguments to base plot function
 #'
 #' @importFrom graphics plot lines legend
+#' @importFrom ggplot2 ggplot aes geom_point geom_line theme
 #' @export
 plot.aci <- function(x, index = NULL, legend = TRUE, predictions = TRUE, engine = "base", ...) {
   params <- list(...)
@@ -46,15 +47,16 @@ plot.aci <- function(x, index = NULL, legend = TRUE, predictions = TRUE, engine 
     }
   }
   else if(engine == "ggplot") {
-    p <- data.frame(
+    p.data <- data.frame(
       x = 1:length(index),
       y = x$Y[index],
       lower = x$intervals[index, 1],
       upper = x$intervals[index, 2],
       predictions = x$predictions[index],
       covered = factor(x$covered[index], labels = c("Outside interval", "Within interval"))
-    ) %>%
-      ggplot(aes(x = index, y = y)) +
+    )
+
+    p <- ggplot(p.data, aes(x = index, y = y)) +
       geom_point(aes(color = covered), size = 0.5) +
       geom_line(aes(y = predictions, color = "Predictions")) +
       geom_line(aes(y = lower), alpha = 0.5) +

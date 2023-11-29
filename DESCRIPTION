@@ -5,7 +5,7 @@ Version: 0.1.0
 Author: Herbert Susmann
 Maintainer: Herbert Susmann <herbps10@gmail.com>
 Description: Implementations of several Adaptive Conformal Inference algorithms
-License: MIT
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Suggests: 

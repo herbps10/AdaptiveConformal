@@ -1,11 +1,14 @@
-@misc{feldman2023rollingrisk,
-  title={Achieving Risk Control in Online Learning Settings},
-  author={Shai Feldman and Liran Ringel and Stephen Bates and Yaniv Romano},
-  year={2023},
-  eprint={arXiv preprint arXiv:2205.09095},
-  primaryClass={cs.LG},
-  url={https://arxiv.org/abs/2205.09095}
+@article{feldman2023rollingrisk,
+title={Achieving Risk Control in Online Learning Settings},
+author={Shai Feldman and Liran Ringel and Stephen Bates and Yaniv Romano},
+journal={Transactions on Machine Learning Research},
+issn={2835-8856},
+year={2023},
+url={https://openreview.net/forum?id=5Y04GWvoJu},
+note={}
 }
+
+
 @InProceedings{zaffran2022agaci,
   title={Adaptive Conformal Predictions for Time Series},
   author={Zaffran, Margaux and Feron, Olivier and Goude, Yannig and Josse, Julie and Dieuleveut, Aymeric},
@@ -20,6 +23,19 @@
   pdf= 	 {https://proceedings.mlr.press/v162/zaffran22a/zaffran22a.pdf},
   url= 	 {https://proceedings.mlr.press/v162/zaffran22a.html}
 }
+
+@inproceedings{gibbs2021adaptive,
+ author = {Gibbs, Isaac and Candes, Emmanuel},
+ booktitle = {Advances in Neural Information Processing Systems},
+ editor = {M. Ranzato and A. Beygelzimer and Y. Dauphin and P.S. Liang and J. Wortman Vaughan},
+ pages = {1660--1672},
+ publisher = {Curran Associates, Inc.},
+ title = {Adaptive Conformal Inference Under Distribution Shift},
+ url = {https://proceedings.neurips.cc/paper_files/paper/2021/file/0d441de75945e5acbc865406fc9a2559-Paper.pdf},
+ volume = {34},
+ year = {2021}
+}
+
 @misc{gibbs2022faci,
   title={Conformal Inference for Online Prediction with Arbitrary Distribution Shifts},
   author={Isaac Gibbs and Emmanuel Candès},
@@ -28,13 +44,21 @@
   primaryClass={stat.ME},
   url={https://arxiv.org/abs/2208.08401}
 }
-@misc{bhatnagar2023improved,
-      title={Improved Online Conformal Prediction via Strongly Adaptive Online Learning},
-      author={Aadyot Bhatnagar and Huan Wang and Caiming Xiong and Yu Bai},
-      year={2023},
-      eprint={arXiv preprint arXiv:2302.07869},
-      primaryClass={cs.LG}
+
+@inproceedings{bhatnagar2023improved,
+author = {Bhatnagar, Aadyot and Wang, Huan and Xiong, Caiming and Bai, Yu},
+title = {Improved Online Conformal Prediction via Strongly Adaptive Online Learning},
+year = {2023},
+publisher = {JMLR.org},
+abstract = {We study the problem of uncertainty quantification via prediction sets, in an online setting where the data distribution may vary arbitrarily over time. Recent work develops online conformal prediction techniques that leverage regret minimization algorithms from the online learning literature to learn prediction sets with approximately valid coverage and small regret. However, standard regret minimization could be insufficient for handling changing environments, where performance guarantees may be desired not only over the full time horizon but also in all (sub-)intervals of time. We develop new online conformal prediction methods that minimize the strongly adaptive regret, which measures the worst-case regret over all intervals of a fixed length. We prove that our methods achieve near-optimal strongly adaptive regret for all interval lengths simultaneously, and approximately valid coverage. Experiments show that our methods consistently obtain better coverage and smaller prediction sets than existing methods on real-world tasks, such as time series forecasting and image classification under distribution shift.},
+booktitle = {Proceedings of the 40th International Conference on Machine Learning},
+articleno = {100},
+numpages = {27},
+location = {Honolulu, Hawaii, USA},
+series = {ICML'23}
 }
+
+
 @article{orabona2018scalefree,
   title = {Scale-free online learning},
   journal = {Theoretical Computer Science},

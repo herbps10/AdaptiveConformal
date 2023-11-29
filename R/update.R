@@ -96,6 +96,7 @@ update.aci <- function(object, newY, newpredictions, newX = NULL, training = FAL
 #'
 #' @param object ACI object
 #' @param indices indices of observations to include in computation of metrics
+#' @importFrom stats sd
 #' @export
 aci_metrics <- function(object, indices = NULL) {
   if(is.null(indices)) {

@@ -9,7 +9,7 @@ initialize_aci <- function(object) {
 
   acceptable_parameters <- list(
     interval_constructor = c("conformal", "linear"),
-    conformity_score = c("absolute_error"),
+    conformity_score = c("absolute_error", is.function),
     symmetric = c(FALSE, TRUE),
     conditional = c(FALSE, TRUE)
   )

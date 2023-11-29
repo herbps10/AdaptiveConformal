@@ -143,7 +143,7 @@ aci <- function(Y = NULL, predictions = NULL, X = NULL, training = FALSE, alpha 
   return(object)
 }
 
-aci_methods <- function() c("AgACI", "ACI", "FACI", "GACI", "SF-OGD", "SAOCP", "SCP")
+aci_methods <- function() c("AgACI", "ACI", "FACI", "SF-OGD", "SAOCP", "SCP")
 
 #' Compute a conformal prediction interval
 #'

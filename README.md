@@ -1,5 +1,9 @@
 # Adaptive Conformal Inference in R
 
+<!-- badges: start -->
+  [![R-CMD-check](https://github.com/herbps10/AdaptiveConformal/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/herbps10/AdaptiveConformal/actions/workflows/R-CMD-check.yaml)
+  <!-- badges: end -->
+
 The `AdaptiveConformal` package implements several Adaptive Conformal
 Inference (ACI) algorithms in R.
 
@@ -12,7 +16,7 @@ The basic idea behind ACI is to adaptively generate prediction intervals that gr
 
 The following algorithms are included:
 - `SCP`: Split Conformal Prediction
-- `ACI``: Adaptive Conformal Inference ([Gibbs and Candès 2021](https://arxiv.org/abs/2106.00170)).
+- `ACI`: Adaptive Conformal Inference ([Gibbs and Candès 2021](https://arxiv.org/abs/2106.00170)).
 - `AgACI`: Aggregated Adaptive Conformal Inference ([Zaffran et al. 2022](https://proceedings.mlr.press/v162/zaffran22a.html)).
 - `FACI`: Fully Adaptive Conformal Inference ([Gibbs and Candès 2022](https://arxiv.org/abs/2208.08401)).
 - `SF-OGD`: Scale-Free Online Gradient Descent ([Orabona and Pál 2018](https://www.sciencedirect.com/science/article/pii/S0304397517308514), [Bhatnagar et al. 2023](https://arxiv.org/abs/2302.07869)).

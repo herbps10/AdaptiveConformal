@@ -19,5 +19,6 @@ VignetteBuilder: knitr
 Imports: 
     opera,
     ggplot2,
-    Rdpack
+    Rdpack,
+    slider
 RdMacros: Rdpack

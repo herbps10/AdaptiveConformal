@@ -104,29 +104,29 @@ Let's zoom in on a smaller section so we can see the prediction intervals more c
 plot(result, index = 200:300)
 ```
 
-Next, we can try a different ACI method: Fully Adaptive Conformal Inference (FACI). We'll also supply the data directly when we create the ACI object this time, instead of calling the `update` method afterwards.
-```{r faci}
-result_faci <- aci(
+Next, we can try a different ACI method: Fully Adaptive Conformal Inference (DtACI). We'll also supply the data directly when we create the ACI object this time, instead of calling the `update` method afterwards.
+```{r dtaci}
+result_dtaci <- aci(
   Y[t_star:length(Y)],
   predictions[t_star:length(Y)],
-  method = "FACI", 
+  method = "DtACI", 
   alpha = 0.9
 )
 ```
 
-```{r faci_summary}
-summary(result_faci)
+```{r dtaci_summary}
+summary(result_dtaci)
 ```
 
-```{r faci_plot}
-plot(result_faci)
+```{r dtaci_plot}
+plot(result_dtaci)
 ```
 
-```{r faci_plot_zoom}
-plot(result_faci, index = 200:300)
+```{r dtaci_plot_zoom}
+plot(result_dtaci, index = 200:300)
 ```
 
-If we plot the results from both the AgACI and the FACI methods, we see that they yield quite similar prediction intervals.
+If we plot the results from both the AgACI and the DtACI methods, we see that they yield quite similar prediction intervals.
 ```{r comparison_plot}
 plot(result$Y[200:300], ylim = c(30e3, 85e3))
 
@@ -134,9 +134,9 @@ plot(result$Y[200:300], ylim = c(30e3, 85e3))
 lines(result$intervals[200:300, 1], col = "darkred")
 lines(result$intervals[200:300, 2], col = "darkred")
 
-# FACI
-lines(result_faci$intervals[200:300, 1], col = "blue")
-lines(result_faci$intervals[200:300, 2], col = "blue")
+# DtACI
+lines(result_dtaci$intervals[200:300, 1], col = "blue")
+lines(result_dtaci$intervals[200:300, 2], col = "blue")
 
-legend("topright", legend = c("AgACI", "FACI"), fill = c("darkred", "blue"))
+legend("topright", legend = c("AgACI", "DtACI"), fill = c("darkred", "blue"))
 ```

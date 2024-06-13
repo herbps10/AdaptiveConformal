@@ -12,17 +12,17 @@
 #'      \item{'SCP'}{Split Conformal Prediction.}
 #'      \item{'AgACI'}{Aggregated ACI \insertCite{zaffran2022agaci}{AdaptiveConformal}.
 #'      Multiple ACI algorithms are executed for a grid of learning rates, and the resulting intervals are combined using Bernstein Online Aggregation.}
-#'      \item{'FACI'}{Fully Adaptive Conformal Inference \insertCite{gibbs2022faci}{AdaptiveConformal}.}
+#'      \item{'DtACI'}{Dynamically-tuned Adaptive Conformal Inference \insertCite{gibbs2022faci}{AdaptiveConformal}.}
 #'      \item{'SF-OGD'}{Scale-Free Online Gradient Descent \insertCite{orabona2018scalefree}{AdaptiveConformal}.}
 #'      \item{'SAOCP'}{Strongly Adaptive Online Conformal Prediction \insertCite{bhatnagar2023improved}{AdaptiveConformal}.}
 #'   }
 #' @param parameters a list of parameters that depend on the chosen ACI method.
 #' \describe{
 #'    \item{gamma}{A positive number specifying the learning rate. For method "ACI".}
-#'    \item{gamma_grid}{A grid of positive learning rates. For method "AgACI" and "FACI.}
+#'    \item{gamma_grid}{A grid of positive learning rates. For method "AgACI" and "DtACI.}
 #'    \item{theta0}{Initial value for theta parameter.}
 #'    \item{interval_constructor}{
-#'      Specifies how the prediction intervals are to be formed. Only for "ACI" and "AgACI". For "FACI", it is always set to "conformal".
+#'      Specifies how the prediction intervals are to be formed. Only for "ACI" and "AgACI". For "DtACI", it is always set to "conformal".
 #'      \itemize{
 #'        \item "conformal": the interval is formed as [prediction - S, prediction + S], where S is the theta*100\% quantile of the previously observed.
 #'        This is the default for "ACI" and "AgACI".
@@ -127,7 +127,7 @@ aci <- function(Y = NULL, predictions = NULL, X = NULL, training = FALSE, alpha 
     SCP = initialize_scp,
     ACI = initialize_aci,
     AgACI = initialize_ag_aci,
-    FACI = initialize_faci,
+    DtACI = initialize_dtaci,
     "SF-OGD" = initialize_sfogd,
     SAOCP = initialize_saocp
   )
@@ -143,7 +143,7 @@ aci <- function(Y = NULL, predictions = NULL, X = NULL, training = FALSE, alpha 
   return(object)
 }
 
-aci_methods <- function() c("AgACI", "ACI", "FACI", "SF-OGD", "SAOCP", "SCP")
+aci_methods <- function() c("AgACI", "ACI", "DtACI", "SF-OGD", "SAOCP", "SCP")
 
 #' Compute a conformal prediction interval
 #'
@@ -159,7 +159,7 @@ predict.aci <- function(object, prediction = 0, X = NULL, ...) {
     SCP = predict_scp,
     ACI = predict_aci,
     AgACI = predict_ag_aci,
-    FACI = predict_faci,
+    DtACI = predict_dtaci,
     "SF-OGD" = predict_sfogd,
     SAOCP = predict_saocp
   )

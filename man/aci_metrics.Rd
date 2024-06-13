@@ -4,12 +4,14 @@
 \alias{aci_metrics}
 \title{Compute metrics for ACI prediction intervals.}
 \usage{
-aci_metrics(object, indices = NULL)
+aci_metrics(object, indices = NULL, interval_width = 20)
 }
 \arguments{
 \item{object}{ACI object}
 
 \item{indices}{indices of observations to include in computation of metrics}
+
+\item{interval_width}{interval width used for calculating strongly adaptive regret}
 }
 \description{
 Compute metrics for ACI prediction intervals.

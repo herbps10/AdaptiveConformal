@@ -80,7 +80,7 @@ plot.aci <- function(x, index = NULL, legend = TRUE, predictions = TRUE, engine 
 #' @param ... additional arguments to plot
 #' @importFrom graphics axis points
 #' @export
-plot_agaci_weights <- function(x, type = "last", legend = "topright", ...) {
+plot_agaci_weights <- function(x, type = "last", legend = "topright", ylim = NULL, ...) {
   if(x$method != "AgACI") {
     stop("Method only supported for ACI objects fit with AgACI")
   }
@@ -89,13 +89,17 @@ plot_agaci_weights <- function(x, type = "last", legend = "topright", ...) {
   gamma         <- x$internal$gamma_grid
 
   if(type == "last") {
+    if(is.null(ylim)) {
+      ylim <- range(c(lower_weights, upper_weights)) * c(0.8, 1.2) # Stretch range
+    }
+
     plot(
       1:length(gamma),
       upper_weights,
       type = "p",
-      ylim = range(c(lower_weights, upper_weights)) * c(0.8, 1.2), # Stretch range
       col = "blue",
       xaxt = 'n',
+      ylim = ylim,
       xlab = expression(Learning~Rates~(gamma)),
       ylab = "Weight",
       ...

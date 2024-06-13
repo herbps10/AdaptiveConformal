@@ -62,7 +62,7 @@ update.aci <- function(object, newY, newpredictions, newX = NULL, training = FAL
     SCP = update_scp,
     ACI = update_aci,
     AgACI = update_ag_aci,
-    FACI  = update_faci,
+    DtACI = update_dtaci,
     "SF-OGD" = update_sfogd,
     SAOCP = update_saocp
   )
@@ -93,13 +93,19 @@ update.aci <- function(object, newY, newpredictions, newX = NULL, training = FAL
   object
 }
 
+pinball_loss <- function(alpha, theta, r) {
+  ifelse(theta >= r, (1 - alpha) * (theta - r), alpha * (r - theta))
+}
+
 #' Compute metrics for ACI prediction intervals.
 #'
 #' @param object ACI object
 #' @param indices indices of observations to include in computation of metrics
+#' @param interval_width interval width used for calculating strongly adaptive regret
 #' @importFrom stats sd
+#' @importFrom slider slide_dbl
 #' @export
-aci_metrics <- function(object, indices = NULL) {
+aci_metrics <- function(object, indices = NULL, interval_width = 20) {
   if(is.null(indices)) {
     indices <- 1:length(object$Y)
   }
@@ -117,6 +123,12 @@ aci_metrics <- function(object, indices = NULL) {
   above <- mean(object$Y[indices] > object$intervals[indices, 2])
   path_length <- sum(abs(diff(object$intervals[indices, 2] - object$intervals[indices, 1])))
 
+  residuals <- object$Y[indices] - object$predictions[indices,]
+  losses <- slide_dbl(pinball_loss(object$alpha, residuals, diff / 2), mean, .after = interval_width, .step = 1)
+  optimal_radii <- slide_dbl(residuals, function(x) quantile(x, object$alpha), .after = interval_width, .step = 1)
+  optimal_losses <- slide_dbl(seq_along(residuals), function(i) mean(pinball_loss(object$alpha, residuals[i], optimal_radii[i]), .after = interval_width, .step = 1))
+  strongly_adaptive_regret <- max(losses - optimal_losses)
+
   conditional_coverage <- NA
   if(!is.null(object$X) && nrow(object$X) == length(indices)) {
     conditional_coverage <- (object$covered[indices] %*% object$X[indices, ]) / colSums(object$X[indices,,drop = FALSE])
@@ -130,6 +142,8 @@ aci_metrics <- function(object, indices = NULL) {
     below = below,
     above = above,
     conditional_coverage = conditional_coverage,
+    interval_width = interval_width,
+    strongly_adaptive_regret = strongly_adaptive_regret,
     path_length = path_length
   ))
 }

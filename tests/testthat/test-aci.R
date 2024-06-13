@@ -1,7 +1,7 @@
 test_that("Methods are tested", {
   expect_error(aci(method = "xxx"))
 
-  for(method in c("ACI", "AgACI", "FACI")) {
+  for(method in c("ACI", "AgACI", "DtACI")) {
     x <- aci(method = method)
     expect_equal(x$method, method)
   }

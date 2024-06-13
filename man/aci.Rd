@@ -32,7 +32,7 @@ The available methods are:
    \item{'SCP'}{Split Conformal Prediction.}
    \item{'AgACI'}{Aggregated ACI \insertCite{zaffran2022agaci}{AdaptiveConformal}.
    Multiple ACI algorithms are executed for a grid of learning rates, and the resulting intervals are combined using Bernstein Online Aggregation.}
-   \item{'FACI'}{Fully Adaptive Conformal Inference \insertCite{gibbs2022faci}{AdaptiveConformal}.}
+   \item{'DtACI'}{Dynamically-tuned Adaptive Conformal Inference \insertCite{gibbs2022faci}{AdaptiveConformal}.}
    \item{'SF-OGD'}{Scale-Free Online Gradient Descent \insertCite{orabona2018scalefree}{AdaptiveConformal}.}
    \item{'SAOCP'}{Strongly Adaptive Online Conformal Prediction \insertCite{bhatnagar2023improved}{AdaptiveConformal}.}
 }}
@@ -40,10 +40,10 @@ The available methods are:
 \item{parameters}{a list of parameters that depend on the chosen ACI method.
 \describe{
    \item{gamma}{A positive number specifying the learning rate. For method "ACI".}
-   \item{gamma_grid}{A grid of positive learning rates. For method "AgACI" and "FACI.}
+   \item{gamma_grid}{A grid of positive learning rates. For method "AgACI" and "DtACI.}
    \item{theta0}{Initial value for theta parameter.}
    \item{interval_constructor}{
-     Specifies how the prediction intervals are to be formed. Only for "ACI" and "AgACI". For "FACI", it is always set to "conformal".
+     Specifies how the prediction intervals are to be formed. Only for "ACI" and "AgACI". For "DtACI", it is always set to "conformal".
      \itemize{
        \item "conformal": the interval is formed as [prediction - S, prediction + S], where S is the theta*100\% quantile of the previously observed.
        This is the default for "ACI" and "AgACI".
